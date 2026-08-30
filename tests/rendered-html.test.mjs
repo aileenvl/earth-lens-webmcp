@@ -39,12 +39,14 @@ test("server-renders the Earth Lens investigation shell", async () => {
 
 test("keeps the WebMCP integration in the application source", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const registration = await readFile(new URL("../app/webmcp/register.ts", import.meta.url), "utf8");
+  const tools = await readFile(new URL("../app/webmcp/tools.ts", import.meta.url), "utf8");
 
   assert.match(page, /document\.modelContext/);
-  assert.match(page, /registerTool\(tool/);
-  assert.match(page, /get_workspace_state/);
-  assert.match(page, /query_selected_area/);
-  assert.match(page, /create_situation_lens/);
+  assert.match(registration, /registerTool\(tool/);
+  assert.match(tools, /get_workspace_state/);
+  assert.match(tools, /query_selected_area/);
+  assert.match(tools, /create_situation_lens_draft/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
 });
 

@@ -191,9 +191,9 @@ unavailable, timeout, cancellation, and stale-request behavior.
 
 **Acceptance criteria:**
 
-- [ ] One provider failure leaves other evidence interactive.
-- [ ] Empty and unavailable states use different language.
-- [ ] Rapid area/time changes cannot apply results from an older revision.
+- [x] One provider failure leaves other evidence interactive.
+- [x] Empty and unavailable states use different language.
+- [x] Rapid area/time changes cannot apply results from an older revision.
 
 **Verification:**
 
@@ -208,8 +208,8 @@ unavailable, timeout, cancellation, and stale-request behavior.
 
 ## Checkpoint C — Complete live evidence
 
-- [ ] USGS, NASA EONET, and Open-Meteo/CAMS operate together.
-- [ ] Each provider can fail without a misleading blank or global failure.
+- [x] USGS, NASA EONET, and Open-Meteo/CAMS operate together.
+- [x] Each provider can fail without a misleading blank or global failure.
 - [ ] Evidence types and limitations remain visible at mobile and desktop widths.
 
 ## T09 — Register WebMCP discovery and read tools
@@ -219,13 +219,13 @@ and expose workspace/source/query/inspection reads with structured envelopes.
 
 **Acceptance criteria:**
 
-- [ ] Tools register once, clean up correctly, and degrade safely without WebMCP.
-- [ ] Inputs are validated during execution and errors use one result envelope.
-- [ ] Read results reflect the current human-selected workspace revision.
+- [x] Tools register once, clean up correctly, and degrade safely without WebMCP.
+- [x] Inputs are validated during execution and errors use one result envelope.
+- [x] Read results reflect the current human-selected workspace revision.
 
 **Verification:**
 
-- [ ] Contract tests validate names, descriptions, schemas, results, and cleanup.
+- [x] Contract tests validate names, descriptions, schemas, results, and cleanup.
 - [ ] Supported browser discovers and invokes all read tools.
 
 **Dependencies:** T08
@@ -241,9 +241,9 @@ to the same reversible domain operations used by humans.
 
 **Acceptance criteria:**
 
-- [ ] Every agent mutation visibly updates map/list/controls and activity history.
-- [ ] Mutations report revision and reversibility.
-- [ ] `undo_last_agent_change` restores exact prior state without undoing a newer
+- [x] Every agent mutation visibly updates map/list/controls and activity history.
+- [x] Mutations report revision and reversibility.
+- [x] `undo_last_agent_change` restores exact prior state without undoing a newer
       human correction.
 
 **Verification:**

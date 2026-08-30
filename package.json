@@ -11,7 +11,7 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs && npm run test:logic",
     "test:domain": "node --experimental-strip-types --experimental-test-coverage --test tests/domain/*.test.ts",
-    "test:logic": "node --experimental-strip-types --experimental-test-coverage --test tests/domain/*.test.ts tests/sources/*.test.ts",
+    "test:logic": "node --experimental-strip-types --experimental-test-coverage --test tests/domain/*.test.ts tests/sources/*.test.ts tests/webmcp/*.test.ts",
     "lint": "eslint app tests tools --ignore-pattern app/_sites-preview",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
