@@ -10,19 +10,22 @@ tests, and approved quality commands reproducible before feature code begins.
 
 **Acceptance criteria:**
 
-- [ ] Node 22.13+ installs dependencies without an engine conflict.
-- [ ] The obsolete starter-skeleton test first fails against Earth Lens and is
+- [x] Node 22.13+ installs dependencies without an engine conflict.
+- [x] The obsolete starter-skeleton test first fails against Earth Lens and is
       replaced by a render smoke test for the current application shell.
-- [ ] Typecheck, lint, floor guard, tests, dependency audit, architecture check,
-      axe, Lighthouse, and redacted Gitleaks commands are installed and runnable
-      at their declared lifecycle stages.
+- [x] Typecheck, lint, floor guard, tests, dependency audit, architecture check,
+      axe, the browser performance budget, and redacted Gitleaks commands are
+      installed and runnable at their declared lifecycle stages.
 
 **Verification:**
 
-- [ ] `npm run check:fast`
-- [ ] `npm test`
-- [ ] `npm audit --audit-level=high`
-- [ ] `gitleaks git --redact --no-banner`
+- [x] `npm run check:fast`
+- [x] `npm test`
+- [x] `npm audit --audit-level=high`
+- [x] `npm run check:architecture`
+- [x] `npm run check:secrets`
+- [x] `npm run check:a11y -- http://localhost:3000`
+- [x] `npm run check:performance -- http://localhost:3000`
 
 **Dependencies:** None
 **Files likely touched:** `package.json`, `package-lock.json`,

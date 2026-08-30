@@ -1,6 +1,6 @@
 # Implementation Plan: Earth Lens Hackathon Release
 
-**Status:** Proposed for review
+**Status:** Accepted on 2026-08-29
 **Accepted specifications:** `docs/specs/`
 **Task list:** `tasks/todo.md`
 

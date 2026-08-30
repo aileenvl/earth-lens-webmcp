@@ -198,22 +198,6 @@ export default function Home() {
     return () => controller.abort();
   }, [log]);
 
-  const mapClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest("button,.marker,.evidenceCard,.timebar,.legend")) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = Math.max(15, Math.min(85, ((event.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(15, Math.min(78, ((event.clientY - rect.top) / rect.height) * 100));
-    setSelection({ x, y, radius: selection.radius, label: "Your selected area" });
-    log("You moved the investigation area. The agent can now query this exact selection.", "human");
-  };
-
-  const mapKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    setSelection({ ...selection, label: "Keyboard-selected area" });
-    log("You confirmed the current investigation area with the keyboard.", "human");
-  };
-
   const selected = observations.find((item) => item.id === selectedObservation);
 
   return (
@@ -259,10 +243,7 @@ export default function Home() {
         <div
           className="map"
           aria-label="Environmental evidence map centered on Monterrey"
-          onClick={mapClick}
-          onKeyDown={mapKeyDown}
-          role="button"
-          tabIndex={0}
+          role="region"
         >
           <div className="mapGrid" />
           <div className="terrain terrainOne" /><div className="terrain terrainTwo" /><div className="terrain terrainThree" />
@@ -280,7 +261,7 @@ export default function Home() {
             ><i>{item.value}</i></button>
           ))}
 
-          <div className="mapHint">Click anywhere to move your investigation area</div>
+          <div className="mapHint">Select an observation to inspect its evidence</div>
           <div className="mapTools"><button aria-label="Zoom in">＋</button><button aria-label="Zoom out">−</button><button aria-label="Locate selection">⌖</button></div>
           <div className="timebar">
             <button aria-label="Previous time window">◀</button>
