@@ -153,7 +153,7 @@ that their aggregated geometry is approximate and for general information.
 **Verification:**
 
 - [x] EONET fixture tests cover valid, empty, malformed, and aborted responses.
-- [ ] Browser layer/list rendering works independently from USGS.
+- [x] Browser layer/list rendering works independently from USGS.
 
 **Dependencies:** T05
 **Files likely touched:** `app/sources/eonet/schema.ts`,
