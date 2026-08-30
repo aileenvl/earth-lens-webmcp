@@ -36,3 +36,23 @@ aggregated, or an official alert. Missing data is not evidence of missing risk.
 
 The agent may prepare a situation lens. Publishing, messaging, donating,
 volunteering, or transmitting personal information is outside the MVP.
+
+## ADR-006: Use the current ArcGIS component architecture
+
+**Status:** Accepted
+
+Use ArcGIS Maps SDK for JavaScript 5.1 components for the visible map shell,
+loaded only in the browser. Use ArcGIS core classes for typed layers, geodesic
+selection circles, and spatial queries.
+
+ArcGIS 5.1 recommends map components and deprecates new widget-based `MapView`
+UI work ahead of version 6.0 removals. This decision avoids starting the
+submission on a deprecated presentation architecture while retaining direct
+access to the geospatial APIs Earth Lens needs.
+
+Official sources:
+
+- https://developers.arcgis.com/javascript/latest/v5-1/
+- https://developers.arcgis.com/javascript/latest/get-started/
+- https://developers.arcgis.com/javascript/latest/references/core/geometry/Circle/
+- https://developers.arcgis.com/javascript/latest/query-filter/

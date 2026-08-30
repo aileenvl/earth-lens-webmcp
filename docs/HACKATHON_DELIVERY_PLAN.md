@@ -1,7 +1,7 @@
 # Earth Lens — WebMCP Hackathon Delivery Plan
 
-**Deadline:** September 3, 2026 at 1:00 p.m. PT  
-**Internal target:** September 3 at 10:00 a.m. PT  
+**Deadline:** September 3, 2026 at 1:00 p.m. PT
+**Internal target:** September 3 at 10:00 a.m. PT
 **Critical path:** ArcGIS app → live sources → WebMCP proof → public repository
 and deployment → demo video → submission
 
