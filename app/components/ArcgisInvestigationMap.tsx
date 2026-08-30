@@ -2,7 +2,7 @@
 
 import { createElement, useEffect, useRef, useState } from "react";
 
-import type { InvestigationArea } from "../domain/types.ts";
+import type { EvidenceRecord, InvestigationArea } from "../domain/types.ts";
 import { validateInvestigationArea } from "../domain/validation.ts";
 
 interface ArcgisMapElement extends HTMLElement {
@@ -12,13 +12,17 @@ interface ArcgisMapElement extends HTMLElement {
       remove: (graphic: unknown) => void;
     };
     goTo: (target: unknown, options?: { animate?: boolean }) => Promise<void>;
-    on: (eventName: "click", listener: (event: { mapPoint?: { latitude?: number; longitude?: number } }) => void) => { remove: () => void };
+    hitTest: (event: unknown) => Promise<{ results?: Array<{ graphic?: { attributes?: Record<string, unknown> } }> }>;
+    on: (eventName: "click", listener: (event: { mapPoint?: { latitude?: number; longitude?: number } }) => void | Promise<void>) => { remove: () => void };
   };
 }
 
 interface ArcgisInvestigationMapProps {
   area: InvestigationArea;
+  evidence: readonly EvidenceRecord[];
+  selectedEvidenceId: string | null;
   onAreaChange: (area: InvestigationArea) => void;
+  onEvidenceSelect: (evidenceId: string) => void;
 }
 
 type MapStatus = "loading" | "ready" | "unavailable";
@@ -57,17 +61,23 @@ function loadArcgisSdk(): Promise<void> {
   return arcgisLoader;
 }
 
-export function ArcgisInvestigationMap({ area, onAreaChange }: ArcgisInvestigationMapProps) {
+export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onAreaChange, onEvidenceSelect }: ArcgisInvestigationMapProps) {
   const [status, setStatus] = useState<MapStatus>("loading");
   const [formError, setFormError] = useState<string | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
   const areaRef = useRef(area);
   const onAreaChangeRef = useRef(onAreaChange);
+  const onEvidenceSelectRef = useRef(onEvidenceSelect);
+  const evidenceRef = useRef(evidence);
+  const selectedEvidenceIdRef = useRef(selectedEvidenceId);
   const drawSelectionRef = useRef<((nextArea: InvestigationArea) => void) | null>(null);
+  const drawEvidenceRef = useRef<((records: readonly EvidenceRecord[], selectedId: string | null) => void) | null>(null);
 
   useEffect(() => {
     onAreaChangeRef.current = onAreaChange;
   }, [onAreaChange]);
+
+  useEffect(() => { onEvidenceSelectRef.current = onEvidenceSelect; }, [onEvidenceSelect]);
 
   useEffect(() => {
     areaRef.current = area;
@@ -75,9 +85,16 @@ export function ArcgisInvestigationMap({ area, onAreaChange }: ArcgisInvestigati
   }, [area]);
 
   useEffect(() => {
+    evidenceRef.current = evidence;
+    selectedEvidenceIdRef.current = selectedEvidenceId;
+    drawEvidenceRef.current?.(evidence, selectedEvidenceId);
+  }, [evidence, selectedEvidenceId]);
+
+  useEffect(() => {
     let disposed = false;
     let clickHandle: { remove: () => void } | undefined;
     let selectionGraphic: unknown;
+    let evidenceGraphics: unknown[] = [];
     const mapElement = containerRef.current?.querySelector<ArcgisMapElement>("arcgis-map");
     if (!mapElement) return;
 
@@ -113,7 +130,37 @@ export function ArcgisInvestigationMap({ area, onAreaChange }: ArcgisInvestigati
             view.graphics.add(selectionGraphic);
           };
           drawSelectionRef.current(areaRef.current);
-          clickHandle = view.on("click", ({ mapPoint }) => {
+          drawEvidenceRef.current = (records, selectedId) => {
+            for (const graphic of evidenceGraphics) view.graphics.remove(graphic);
+            evidenceGraphics = records.map((record) => {
+              const magnitude = Number(record.attributes.magnitude ?? 0);
+              const selected = record.id === selectedId;
+              return new Graphic({
+                geometry: { type: "point", longitude: record.coordinates.longitude, latitude: record.coordinates.latitude },
+                attributes: { evidenceId: record.id },
+                symbol: {
+                  type: "simple-marker",
+                  color: selected ? [185, 62, 45, 0.95] : [243, 180, 95, 0.88],
+                  size: Math.max(7, Math.min(22, 6 + magnitude * 2)),
+                  outline: { color: [255, 255, 255, 0.95], width: selected ? 3 : 1.5 },
+                },
+              });
+            });
+            for (const graphic of evidenceGraphics) view.graphics.add(graphic);
+            const selectedRecord = records.find((record) => record.id === selectedId);
+            if (selectedRecord) {
+              void view.goTo({ center: [selectedRecord.coordinates.longitude, selectedRecord.coordinates.latitude], zoom: 8 }, { animate: true });
+            }
+          };
+          drawEvidenceRef.current(evidenceRef.current, selectedEvidenceIdRef.current);
+          clickHandle = view.on("click", async (event) => {
+            const hit = await view.hitTest(event);
+            const evidenceId = hit.results?.find((result) => typeof result.graphic?.attributes?.evidenceId === "string")?.graphic?.attributes?.evidenceId;
+            if (typeof evidenceId === "string") {
+              onEvidenceSelectRef.current(evidenceId);
+              return;
+            }
+            const { mapPoint } = event;
             if (typeof mapPoint?.latitude !== "number" || typeof mapPoint.longitude !== "number") return;
             onAreaChangeRef.current({
               ...areaRef.current,
@@ -141,7 +188,9 @@ export function ArcgisInvestigationMap({ area, onAreaChange }: ArcgisInvestigati
       disposed = true;
       clickHandle?.remove();
       if (selectionGraphic && mapElement.view) mapElement.view.graphics.remove(selectionGraphic);
+      if (mapElement.view) for (const graphic of evidenceGraphics) mapElement.view.graphics.remove(graphic);
       drawSelectionRef.current = null;
+      drawEvidenceRef.current = null;
     };
   }, []);
 

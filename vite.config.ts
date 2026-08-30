@@ -55,6 +55,7 @@ export default defineConfig(async () => {
       ssr: { optimizeDeps },
     },
     server: {
+      host: true,
       watch: {
         ignored: ["**/work/**"],
         ...(isCodexSeatbeltSandbox ? { useFsEvents: false, usePolling: true } : {}),

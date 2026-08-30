@@ -116,9 +116,9 @@ evidence list, with popup inspection and provenance.
 
 **Acceptance criteria:**
 
-- [ ] Changing time or area refreshes/filter results without stale overwrites.
-- [ ] Selecting a map feature or list item opens the same evidence details.
-- [ ] At least one real event can be inspected with provenance and limitation.
+- [x] Changing time or area refreshes/filter results without stale overwrites.
+- [x] Selecting a map feature or list item opens the same evidence details.
+- [x] At least one real event can be inspected with provenance and limitation.
 
 **Verification:**
 

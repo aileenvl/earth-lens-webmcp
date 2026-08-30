@@ -45,8 +45,7 @@ function normalizeFeature(value: unknown, fetchedAt: string, index: number): Val
     || !Array.isArray(coordinates)
     || coordinates.length < 3
     || coordinates.some((coordinate) => typeof coordinate !== "number" || !Number.isFinite(coordinate))
-    || typeof properties.mag !== "number"
-    || !Number.isFinite(properties.mag)
+    || (properties.mag !== null && (typeof properties.mag !== "number" || !Number.isFinite(properties.mag)))
     || typeof properties.place !== "string"
     || typeof properties.time !== "number"
     || typeof properties.updated !== "number"
@@ -78,7 +77,7 @@ function normalizeFeature(value: unknown, fetchedAt: string, index: number): Val
       observedAt,
       fetchedAt,
       evidenceType: "earthquake",
-      title: `M ${properties.mag} · ${properties.place}`,
+      title: `${properties.mag === null ? "Magnitude pending" : `M ${properties.mag}`} · ${properties.place}`,
       attributes: {
         magnitude: properties.mag,
         depthKm,

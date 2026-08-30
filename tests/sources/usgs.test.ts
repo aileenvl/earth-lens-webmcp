@@ -46,6 +46,16 @@ test("normalizes provenance, time, coordinates, magnitude, and review status", a
   });
 });
 
+test("preserves reviewed events whose magnitude is still pending", async () => {
+  const pending = await fixture() as { features: Array<{ properties: Record<string, unknown> }> };
+  pending.features[0].properties.mag = null;
+  const result = normalizeUsgsCollection(pending, "2026-08-30T12:00:00.000Z");
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value[0].attributes.magnitude, null);
+  assert.match(result.value[0].title, /^Magnitude pending/);
+});
+
 test("rejects invalid event timestamps and unsafe provenance URLs", async () => {
   const payload = await fixture() as { features: Array<{ properties: Record<string, unknown> }> };
   payload.features[0].properties.time = Number.MAX_VALUE;

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
-import type { InvestigationArea } from "./domain/types.ts";
+import { filterEvidenceForArea } from "./domain/evidence.ts";
+import type { EvidenceRecord, InvestigationArea, SourceState } from "./domain/types.ts";
+import { fetchUsgsEvidence } from "./sources/usgs.ts";
 
 type LayerId = "earthquakes" | "air-quality" | "thermal";
 type TimeWindow = "24h" | "7d" | "30d";
@@ -66,16 +68,47 @@ export default function Home() {
     updatedBy: "human",
   });
   const [selectedObservation, setSelectedObservation] = useState<string | null>(null);
+  const [earthquakes, setEarthquakes] = useState<EvidenceRecord[]>([]);
+  const [earthquakeState, setEarthquakeState] = useState<SourceState>({ status: "loading", requestedAt: new Date().toISOString() });
   const [panel, setPanel] = useState<"uncertainty" | "activity" | "about" | "lens" | null>("uncertainty");
   const [activity, setActivity] = useState<Activity[]>([
     { id: 1, kind: "agent", text: "Workspace inspected: 3 sources and 1 human selection are available.", time: stamp() },
   ]);
   const [toolsReady, setToolsReady] = useState(false);
-  const stateRef = useRef({ activeLayers, timeWindow, selection });
+  const areaEarthquakes = filterEvidenceForArea(earthquakes, selection);
+  const evidenceResults = areaEarthquakes.length > 0 ? areaEarthquakes : earthquakes.slice(0, 5);
+  const selectedEarthquake = earthquakes.find((record) => record.id === selectedObservation);
+  const mapEarthquakes = selectedEarthquake && !areaEarthquakes.some((record) => record.id === selectedEarthquake.id)
+    ? [...areaEarthquakes, selectedEarthquake]
+    : areaEarthquakes;
+  const stateRef = useRef({ activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState });
 
   useEffect(() => {
-    stateRef.current = { activeLayers, timeWindow, selection };
-  }, [activeLayers, timeWindow, selection]);
+    stateRef.current = { activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState };
+  }, [activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchUsgsEvidence(timeWindow, { signal: controller.signal }).then((result) => {
+      if (controller.signal.aborted) return;
+      if (result.status === "ready") {
+        setEarthquakes(result.data);
+        setEarthquakeState({ status: "ready", fetchedAt: result.fetchedAt, count: result.data.length });
+      } else if (result.status === "empty") {
+        setEarthquakes([]);
+        setEarthquakeState({ status: "empty", fetchedAt: result.fetchedAt, reason: result.reason });
+      } else if (result.code !== "ABORTED") {
+        setEarthquakes([]);
+        setEarthquakeState({ status: "unavailable", fetchedAt: result.fetchedAt, reason: result.message });
+      }
+    });
+    return () => controller.abort();
+  }, [timeWindow]);
+
+  const changeTimeWindow = useCallback((window: TimeWindow) => {
+    setEarthquakeState({ status: "loading", requestedAt: new Date().toISOString() });
+    setTimeWindow(window);
+  }, []);
 
   const log = useCallback((text: string, kind: Activity["kind"] = "agent") => {
     setActivity((items) => [{ id: Date.now() + Math.random(), text, kind, time: stamp() }, ...items].slice(0, 12));
@@ -100,7 +133,7 @@ export default function Home() {
         name: "get_workspace_state",
         description: "Inspect the shared Earth Lens map, including the human-selected region, visible layers, time window, and observations.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
-        execute: async () => json({ ...stateRef.current, observations: observations.filter((o) => stateRef.current.activeLayers.includes(o.layer)) }),
+        execute: async () => json(stateRef.current),
       },
       {
         name: "list_authoritative_sources",
@@ -137,7 +170,7 @@ export default function Home() {
         description: "Change the shared investigation time window. This visibly updates the map timeline.",
         inputSchema: { type: "object", properties: { window: { type: "string", enum: ["24h", "7d", "30d"] } }, required: ["window"], additionalProperties: false },
         execute: async ({ window }) => {
-          setTimeWindow(window as TimeWindow);
+          changeTimeWindow(window as TimeWindow);
           log(`Agent changed the evidence window to ${window}.`);
           return json({ timeWindow: window });
         },
@@ -160,21 +193,21 @@ export default function Home() {
         execute: async () => {
           const s = stateRef.current;
           setPanel("activity");
-          log("Agent inspected your region; live spatial evidence is still connecting.");
-          return json({ selection: s.selection, status: "source_not_connected", observations: [], caution: "No spatial result is returned until the live source is connected." });
+          log(`Agent found ${s.areaEarthquakes.length} USGS earthquake records in your region.`);
+          return json({ selection: s.selection, sourceState: s.earthquakeState, evidence: s.areaEarthquakes, caution: "USGS records may change; this is not an emergency alert." });
         },
       },
       {
         name: "inspect_observation",
         description: "Inspect one observation by ID, highlight it on the map, and return its source, freshness, and limitation.",
-        inputSchema: { type: "object", properties: { observationId: { type: "string", enum: observations.map((o) => o.id) } }, required: ["observationId"], additionalProperties: false },
+        inputSchema: { type: "object", properties: { observationId: { type: "string", description: "An evidence ID returned by query_selected_area, for example usgs:..." } }, required: ["observationId"], additionalProperties: false },
         execute: async ({ observationId }) => {
-          const item = observations.find((o) => o.id === observationId);
+          const item = stateRef.current.earthquakes.find((o) => o.id === observationId);
           if (!item) return json({ error: "Observation not found" });
           setSelectedObservation(item.id);
           setPanel("uncertainty");
           log(`Agent inspected ${item.title} and surfaced its limitation.`);
-          return json({ ...item, source: layerInfo[item.layer] });
+          return json(item);
         },
       },
       {
@@ -204,9 +237,9 @@ export default function Home() {
     ];
     Promise.all(tools.map(register)).then(() => setToolsReady(true)).catch(() => setToolsReady(false));
     return () => controller.abort();
-  }, [log]);
+  }, [changeTimeWindow, log]);
 
-  const selected = observations.find((item) => item.id === selectedObservation);
+  const selected = earthquakes.find((item) => item.id === selectedObservation);
 
   return (
     <main className="shell">
@@ -233,15 +266,32 @@ export default function Home() {
             {(Object.keys(layerInfo) as LayerId[]).map((id) => {
               const info = layerInfo[id];
               const observation = observations.find((item) => item.layer === id)!;
+              const earthquakeSummary = earthquakeState.status === "ready"
+                ? `${areaEarthquakes.length} in selected area`
+                : earthquakeState.status === "loading" ? "Loading live feed…" : earthquakeState.status === "unavailable" ? "Source unavailable" : "No events reported";
               const on = activeLayers.includes(id);
               return (
                 <button className={`signal ${on ? "active" : ""}`} key={id} onClick={() => toggleLayer(id)}>
                   <span className={`signalDot ${info.color}`} />
-                  <span><small>{info.label}</small><strong>{observation.title}</strong><em>{info.source} · {info.freshness}</em></span>
+                  <span><small>{info.label}</small><strong>{id === "earthquakes" ? earthquakeSummary : observation.title}</strong><em>{info.source} · {id === "earthquakes" && earthquakeState.status === "ready" ? new Date(earthquakeState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : info.freshness}</em></span>
                   <b>{on ? "✓" : "+"}</b>
                 </button>
               );
             })}
+          </div>
+
+          <div className="earthquakeResults" aria-live="polite">
+            <div className="sectionHead"><span>{areaEarthquakes.length > 0 ? "USGS EVIDENCE IN AREA" : "RECENT USGS FEED"}</span><span>{areaEarthquakes.length}</span></div>
+            {earthquakeState.status === "loading" && <p>Loading the authoritative USGS feed…</p>}
+            {earthquakeState.status === "unavailable" && <p role="alert">USGS is temporarily unavailable: {earthquakeState.reason}</p>}
+            {earthquakeState.status === "empty" && <p>{earthquakeState.reason}</p>}
+            {earthquakeState.status === "ready" && areaEarthquakes.length === 0 && <p>No earthquakes intersect the selected area. These recent feed examples are outside it and are provided for source inspection.</p>}
+            {evidenceResults.slice(0, 5).map((record) => (
+              <button key={record.id} className={`evidenceResult ${selectedObservation === record.id ? "selected" : ""}`} onClick={() => { setSelectedObservation(record.id); setPanel("uncertainty"); }}>
+                <strong>{record.title}</strong>
+                <span>{new Date(record.observedAt).toLocaleString()} · {String(record.attributes.status)}</span>
+              </button>
+            ))}
           </div>
 
           <div className="sourceNote"><span>✓</span><p><strong>Source-aware</strong><br />Every observation keeps its source, freshness, and limits.</p></div>
@@ -253,12 +303,18 @@ export default function Home() {
           aria-label="Environmental evidence map centered on Monterrey"
           role="region"
         >
-          <ArcgisInvestigationMap area={selection} onAreaChange={(nextArea) => { setSelection(nextArea); log("You revised the investigation area.", "human"); }} />
+          <ArcgisInvestigationMap
+            area={selection}
+            evidence={activeLayers.includes("earthquakes") ? mapEarthquakes : []}
+            selectedEvidenceId={selectedObservation}
+            onEvidenceSelect={(id) => { setSelectedObservation(id); setPanel("uncertainty"); }}
+            onAreaChange={(nextArea) => { setSelection(nextArea); log("You revised the investigation area.", "human"); }}
+          />
           <div className="timebar">
             <button aria-label="Previous time window">◀</button>
             <div><span style={{ width: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /><i style={{ left: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /></div>
             <button aria-label="Next time window">▶</button>
-            <select aria-label="Evidence time window" value={timeWindow} onChange={(event) => { setTimeWindow(event.target.value as TimeWindow); log(`You changed the evidence window to ${event.target.value}.`, "human"); }}>
+            <select aria-label="Evidence time window" value={timeWindow} onChange={(event) => { changeTimeWindow(event.target.value as TimeWindow); log(`You changed the evidence window to ${event.target.value}.`, "human"); }}>
               <option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option>
             </select>
           </div>
@@ -268,14 +324,15 @@ export default function Home() {
             <div className="evidenceCard">
               <button className="close" onClick={() => setPanel(null)} aria-label="Close">×</button>
               <p className="eyebrow">EVIDENCE, NOT A VERDICT</p>
-              <strong>{selected ? selected.title : "2 observations need context"}</strong>
-              <p>{selected ? layerInfo[selected.layer].limitation : "Satellite detections and station readings describe different kinds of evidence. Proximity does not prove impact."}</p>
-              <div className="sourceStrip"><span>{selected ? layerInfo[selected.layer].source : "3 sources"}</span><span>{selected ? layerInfo[selected.layer].freshness : "mixed freshness"}</span></div>
+              <strong>{selected ? selected.title : "Evidence needs context"}</strong>
+              <p>{selected ? selected.limitation : "Select a live USGS event from the map or evidence list to inspect its provenance and limitations."}</p>
+              <div className="sourceStrip"><span>{selected ? "USGS" : "Public sources"}</span><span>{selected ? new Date(selected.observedAt).toLocaleString() : "live when available"}</span></div>
+              {selected && <a className="sourceLink" href={selected.sourceUrl} target="_blank" rel="noreferrer">Open authoritative USGS record ↗</a>}
               <button className="textAction" onClick={() => { setPanel("activity"); log("You asked the agent to inspect uncertainty.", "human"); }}>Ask the agent to investigate →</button>
             </div>
           )}
           {panel === "activity" && <SidePanel title="Collaboration trail" eyebrow="HUMAN + AGENT" onClose={() => setPanel(null)}><div className="activityList">{activity.map((item) => <div className={`activity ${item.kind}`} key={item.id}><span>{item.kind === "agent" ? "✦" : "You"}</span><p>{item.text}</p><time>{item.time}</time></div>)}</div></SidePanel>}
-          {panel === "about" && <SidePanel title="A map you can question" eyebrow="ABOUT EARTH LENS" onClose={() => setPanel(null)}><p>Earth Lens is a shared spatial evidence workspace. Your agent operates semantic WebMCP tools—not map buttons—while every action remains visible and reversible.</p><p className="fineprint">Prototype data is illustrative and must not be used as an official emergency alert.</p></SidePanel>}
+          {panel === "about" && <SidePanel title="A map you can question" eyebrow="ABOUT EARTH LENS" onClose={() => setPanel(null)}><p>Earth Lens is a shared spatial evidence workspace. Your agent operates semantic WebMCP tools—not map buttons—while every action remains visible and reversible.</p><p className="fineprint">Earthquake evidence is retrieved live from USGS. Air-quality and thermal layers remain illustrative and clearly secondary. Earth Lens is not an official emergency alert.</p></SidePanel>}
           {panel === "lens" && <SidePanel title="Situation lens ready for review" eyebrow="DRAFT · NOT PUBLISHED" onClose={() => setPanel(null)}><div className="lensSummary"><b>{selection.label}</b><span>Last {timeWindow}</span><span>{activeLayers.length} active sources</span><span>{observations.filter((o) => activeLayers.includes(o.layer)).length} visible observations</span></div><p className="fineprint">The agent prepared this state. Only you can decide whether to share or publish it.</p><button className="primaryButton" onClick={() => log("You reviewed the draft situation lens.", "human")}>Mark as reviewed</button></SidePanel>}
         </div>
       </section>
