@@ -39,14 +39,14 @@ activity, error, revision, and reversible-operation contracts.
 
 **Acceptance criteria:**
 
-- [ ] Invalid coordinates, radius, provenance, and state transitions are rejected.
-- [ ] Human and agent operations produce attributed revisions.
-- [ ] Every reversible mutation produces an inverse that restores exact state.
+- [x] Invalid coordinates, radius, provenance, and state transitions are rejected.
+- [x] Human and agent operations produce attributed revisions.
+- [x] Every reversible mutation produces an inverse that restores exact state.
 
 **Verification:**
 
-- [ ] Focused domain tests pass with at least 80% changed-line coverage.
-- [ ] `npm run check:fast`
+- [x] Focused domain tests pass with at least 80% changed-line coverage.
+- [x] `npm run check:fast`
 
 **Dependencies:** T01
 **Files likely touched:** `app/domain/types.ts`, `app/domain/validation.ts`,
@@ -55,8 +55,8 @@ activity, error, revision, and reversible-operation contracts.
 
 ## Checkpoint A — Foundation
 
-- [ ] T01 and T02 acceptance criteria pass.
-- [ ] Quality checks finish within their agreed budgets or have measured evidence.
+- [x] T01 and T02 acceptance criteria pass.
+- [x] Quality checks finish within their agreed budgets or have measured evidence.
 - [ ] Human reviews the first domain contract before ArcGIS integration.
 
 ## T03 — Normalize live USGS evidence
