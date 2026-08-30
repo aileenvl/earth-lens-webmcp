@@ -175,7 +175,7 @@ coordinate with required Open-Meteo and CAMS attribution.
 **Verification:**
 
 - [x] Air-quality fixture tests cover valid, missing, error, and abort states.
-- [ ] Browser check distinguishes modelled air quality from observed earthquakes.
+- [x] Browser check distinguishes modelled air quality from observed earthquakes.
 
 **Dependencies:** T05
 **Files likely touched:** `app/sources/air-quality/schema.ts`,
