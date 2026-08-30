@@ -207,6 +207,13 @@ export default function Home() {
     log("You moved the investigation area. The agent can now query this exact selection.", "human");
   };
 
+  const mapKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    setSelection({ ...selection, label: "Keyboard-selected area" });
+    log("You confirmed the current investigation area with the keyboard.", "human");
+  };
+
   const selected = observations.find((item) => item.id === selectedObservation);
 
   return (
@@ -249,7 +256,14 @@ export default function Home() {
           <button className="activityButton" onClick={() => setPanel("activity")}><span>↗</span> Open collaboration trail <b>{activity.length}</b></button>
         </aside>
 
-        <div className="map" aria-label="Environmental evidence map centered on Monterrey" onClick={mapClick}>
+        <div
+          className="map"
+          aria-label="Environmental evidence map centered on Monterrey"
+          onClick={mapClick}
+          onKeyDown={mapKeyDown}
+          role="button"
+          tabIndex={0}
+        >
           <div className="mapGrid" />
           <div className="terrain terrainOne" /><div className="terrain terrainTwo" /><div className="terrain terrainThree" />
           <div className="road roadOne" /><div className="road roadTwo" /><div className="road roadThree" />
