@@ -123,8 +123,8 @@ evidence list, with popup inspection and provenance.
 **Verification:**
 
 - [ ] Integration tests cover store → layer/list → selection synchronization.
-- [ ] Manual browser demo works from a fresh page load.
-- [ ] Deploy a working checkpoint.
+- [x] Manual browser demo works from a fresh page load.
+- [x] Deploy a working checkpoint.
 
 **Dependencies:** T03, T04
 **Files likely touched:** `app/components/map/EvidenceLayer.ts`,
@@ -135,9 +135,9 @@ evidence list, with popup inspection and provenance.
 
 ## Checkpoint B — Real ArcGIS evidence
 
-- [ ] A human can select a real area and inspect a live USGS earthquake.
-- [ ] Map and textual list expose identical selection and provenance.
-- [ ] Public checkpoint URL works without application credentials.
+- [x] A human can select a real area and inspect a live USGS earthquake.
+- [x] Map and textual list expose identical selection and provenance.
+- [x] Public checkpoint URL works without application credentials.
 
 ## T06 — Add NASA EONET evidence
 
