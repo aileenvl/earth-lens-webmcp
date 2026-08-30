@@ -146,13 +146,13 @@ that their aggregated geometry is approximate and for general information.
 
 **Acceptance criteria:**
 
-- [ ] Supported time/status/bbox requests follow the official v3 contract.
-- [ ] Point, polygon, and dated geometry are validated or safely rejected.
-- [ ] EONET limitation and originating source links remain visible.
+- [x] Supported time/status/bbox requests follow the official v3 contract.
+- [x] Point, polygon, and dated geometry are validated or safely rejected.
+- [x] EONET limitation and originating source links remain visible.
 
 **Verification:**
 
-- [ ] EONET fixture tests cover valid, empty, malformed, and aborted responses.
+- [x] EONET fixture tests cover valid, empty, malformed, and aborted responses.
 - [ ] Browser layer/list rendering works independently from USGS.
 
 **Dependencies:** T05

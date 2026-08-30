@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
 import type { EvidenceRecord, InvestigationArea, SourceState } from "./domain/types.ts";
+import { fetchEonetEvidence } from "./sources/eonet.ts";
 import { fetchUsgsEvidence } from "./sources/usgs.ts";
 
-type LayerId = "earthquakes" | "air-quality" | "thermal";
+type LayerId = "earthquakes" | "air-quality" | "natural-events";
 type TimeWindow = "24h" | "7d" | "30d";
 type Activity = { id: number; text: string; kind: "agent" | "human"; time: string };
 type ModelContextTool = {
@@ -40,25 +41,25 @@ const layerInfo: Record<LayerId, { label: string; source: string; color: string;
     freshness: "18 min ago",
     limitation: "Station readings do not represent every nearby neighborhood.",
   },
-  thermal: {
-    label: "Thermal detections",
-    source: "NASA FIRMS",
+  "natural-events": {
+    label: "Natural events",
+    source: "NASA EONET",
     color: "coral",
     freshness: "2 hr ago",
-    limitation: "Satellite heat detections are not confirmed wildfire perimeters.",
+    limitation: "EONET spatial and temporal extents may be approximate and are not official alerts.",
   },
 };
 
 const observations = [
   { id: "eq-42", layer: "earthquakes" as LayerId, title: "M4.2 · 68 km SW", detail: "Depth 10 km · preliminary", x: 46, y: 58, value: "4.2", confidence: "reviewed" },
   { id: "aq-pm", layer: "air-quality" as LayerId, title: "PM₂.₅ · Moderate", detail: "27 µg/m³ · station reading", x: 54, y: 50, value: "PM", confidence: "measured" },
-  { id: "fire-1", layer: "thermal" as LayerId, title: "2 thermal detections", detail: "VIIRS · nominal confidence", x: 63, y: 38, value: "2", confidence: "provisional" },
+  { id: "eonet-live", layer: "natural-events" as LayerId, title: "Live natural events", detail: "NASA EONET", x: 63, y: 38, value: "E", confidence: "curated" },
 ];
 
 const stamp = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 export default function Home() {
-  const [activeLayers, setActiveLayers] = useState<LayerId[]>(["earthquakes", "air-quality", "thermal"]);
+  const [activeLayers, setActiveLayers] = useState<LayerId[]>(["earthquakes", "air-quality", "natural-events"]);
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("24h");
   const [selection, setSelection] = useState<InvestigationArea>({
     latitude: 25.6866,
@@ -70,6 +71,8 @@ export default function Home() {
   const [selectedObservation, setSelectedObservation] = useState<string | null>(null);
   const [earthquakes, setEarthquakes] = useState<EvidenceRecord[]>([]);
   const [earthquakeState, setEarthquakeState] = useState<SourceState>({ status: "loading", requestedAt: new Date().toISOString() });
+  const [naturalEvents, setNaturalEvents] = useState<EvidenceRecord[]>([]);
+  const [naturalEventState, setNaturalEventState] = useState<SourceState>({ status: "loading", requestedAt: new Date().toISOString() });
   const [panel, setPanel] = useState<"uncertainty" | "activity" | "about" | "lens" | null>("uncertainty");
   const [activity, setActivity] = useState<Activity[]>([
     { id: 1, kind: "agent", text: "Workspace inspected: 3 sources and 1 human selection are available.", time: stamp() },
@@ -78,14 +81,17 @@ export default function Home() {
   const areaEarthquakes = filterEvidenceForArea(earthquakes, selection);
   const evidenceResults = areaEarthquakes.length > 0 ? areaEarthquakes : earthquakes.slice(0, 5);
   const selectedEarthquake = earthquakes.find((record) => record.id === selectedObservation);
+  const areaNaturalEvents = filterEvidenceForArea(naturalEvents, selection);
+  const selectedNaturalEvent = naturalEvents.find((record) => record.id === selectedObservation);
   const mapEarthquakes = selectedEarthquake && !areaEarthquakes.some((record) => record.id === selectedEarthquake.id)
     ? [...areaEarthquakes, selectedEarthquake]
     : areaEarthquakes;
-  const stateRef = useRef({ activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState });
+  const mapNaturalEvents = selectedNaturalEvent && !areaNaturalEvents.some((record) => record.id === selectedNaturalEvent.id) ? [...areaNaturalEvents, selectedNaturalEvent] : areaNaturalEvents;
+  const stateRef = useRef({ activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState });
 
   useEffect(() => {
-    stateRef.current = { activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState };
-  }, [activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState]);
+    stateRef.current = { activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState };
+  }, [activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -105,8 +111,26 @@ export default function Home() {
     return () => controller.abort();
   }, [timeWindow]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const days = timeWindow === "24h" ? 1 : timeWindow === "7d" ? 7 : 30;
+    void fetchEonetEvidence({ status: "open", days, limit: 200 }, { signal: controller.signal }).then((result) => {
+      if (controller.signal.aborted) return;
+      if (result.status === "ready") {
+        setNaturalEvents(result.data);
+        setNaturalEventState({ status: "ready", fetchedAt: result.fetchedAt, count: result.data.length });
+      } else if (result.status === "empty") {
+        setNaturalEvents([]); setNaturalEventState({ status: "empty", fetchedAt: result.fetchedAt, reason: result.reason });
+      } else if (result.code !== "ABORTED") {
+        setNaturalEvents([]); setNaturalEventState({ status: "unavailable", fetchedAt: result.fetchedAt, reason: result.message });
+      }
+    });
+    return () => controller.abort();
+  }, [timeWindow]);
+
   const changeTimeWindow = useCallback((window: TimeWindow) => {
     setEarthquakeState({ status: "loading", requestedAt: new Date().toISOString() });
+    setNaturalEventState({ status: "loading", requestedAt: new Date().toISOString() });
     setTimeWindow(window);
   }, []);
 
@@ -144,7 +168,7 @@ export default function Home() {
       {
         name: "add_environmental_layer",
         description: "Add an authoritative environmental evidence layer to the shared visible map.",
-        inputSchema: { type: "object", properties: { layerId: { type: "string", enum: ["earthquakes", "air-quality", "thermal"] } }, required: ["layerId"], additionalProperties: false },
+        inputSchema: { type: "object", properties: { layerId: { type: "string", enum: ["earthquakes", "air-quality", "natural-events"] } }, required: ["layerId"], additionalProperties: false },
         execute: async ({ layerId }) => {
           const id = layerId as LayerId;
           if (!stateRef.current.activeLayers.includes(id)) {
@@ -157,7 +181,7 @@ export default function Home() {
       {
         name: "remove_environmental_layer",
         description: "Remove a layer from the shared visible map without deleting its source data.",
-        inputSchema: { type: "object", properties: { layerId: { type: "string", enum: ["earthquakes", "air-quality", "thermal"] } }, required: ["layerId"], additionalProperties: false },
+        inputSchema: { type: "object", properties: { layerId: { type: "string", enum: ["earthquakes", "air-quality", "natural-events"] } }, required: ["layerId"], additionalProperties: false },
         execute: async ({ layerId }) => {
           const id = layerId as LayerId;
           setActiveLayers((current) => current.filter((item) => item !== id));
@@ -193,8 +217,9 @@ export default function Home() {
         execute: async () => {
           const s = stateRef.current;
           setPanel("activity");
-          log(`Agent found ${s.areaEarthquakes.length} USGS earthquake records in your region.`);
-          return json({ selection: s.selection, sourceState: s.earthquakeState, evidence: s.areaEarthquakes, caution: "USGS records may change; this is not an emergency alert." });
+          const evidence = [...s.areaEarthquakes, ...s.areaNaturalEvents];
+          log(`Agent found ${evidence.length} source records in your region.`);
+          return json({ selection: s.selection, sourceStates: { usgs: s.earthquakeState, eonet: s.naturalEventState }, evidence, caution: "Source records may change; this is not an emergency alert." });
         },
       },
       {
@@ -202,7 +227,7 @@ export default function Home() {
         description: "Inspect one observation by ID, highlight it on the map, and return its source, freshness, and limitation.",
         inputSchema: { type: "object", properties: { observationId: { type: "string", description: "An evidence ID returned by query_selected_area, for example usgs:..." } }, required: ["observationId"], additionalProperties: false },
         execute: async ({ observationId }) => {
-          const item = stateRef.current.earthquakes.find((o) => o.id === observationId);
+          const item = [...stateRef.current.earthquakes, ...stateRef.current.naturalEvents].find((o) => o.id === observationId);
           if (!item) return json({ error: "Observation not found" });
           setSelectedObservation(item.id);
           setPanel("uncertainty");
@@ -239,7 +264,7 @@ export default function Home() {
     return () => controller.abort();
   }, [changeTimeWindow, log]);
 
-  const selected = earthquakes.find((item) => item.id === selectedObservation);
+  const selected = [...earthquakes, ...naturalEvents].find((item) => item.id === selectedObservation);
 
   return (
     <main className="shell">
@@ -269,15 +294,30 @@ export default function Home() {
               const earthquakeSummary = earthquakeState.status === "ready"
                 ? `${areaEarthquakes.length} in selected area`
                 : earthquakeState.status === "loading" ? "Loading live feed…" : earthquakeState.status === "unavailable" ? "Source unavailable" : "No events reported";
+              const naturalEventSummary = naturalEventState.status === "ready"
+                ? `${areaNaturalEvents.length} in selected area`
+                : naturalEventState.status === "loading" ? "Loading live feed…" : naturalEventState.status === "unavailable" ? "Source unavailable" : "No events reported";
               const on = activeLayers.includes(id);
               return (
                 <button className={`signal ${on ? "active" : ""}`} key={id} onClick={() => toggleLayer(id)}>
                   <span className={`signalDot ${info.color}`} />
-                  <span><small>{info.label}</small><strong>{id === "earthquakes" ? earthquakeSummary : observation.title}</strong><em>{info.source} · {id === "earthquakes" && earthquakeState.status === "ready" ? new Date(earthquakeState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : info.freshness}</em></span>
+                  <span><small>{info.label}</small><strong>{id === "earthquakes" ? earthquakeSummary : id === "natural-events" ? naturalEventSummary : observation.title}</strong><em>{info.source} · {id === "earthquakes" && earthquakeState.status === "ready" ? new Date(earthquakeState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : id === "natural-events" && naturalEventState.status === "ready" ? new Date(naturalEventState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : info.freshness}</em></span>
                   <b>{on ? "✓" : "+"}</b>
                 </button>
               );
             })}
+          </div>
+
+          <div className="earthquakeResults naturalEventResults" aria-live="polite">
+            <div className="sectionHead"><span>NASA EONET IN AREA</span><span>{areaNaturalEvents.length}</span></div>
+            {naturalEventState.status === "loading" && <p>Loading NASA EONET events…</p>}
+            {naturalEventState.status === "unavailable" && <p role="alert">NASA EONET is temporarily unavailable: {naturalEventState.reason}</p>}
+            {naturalEventState.status === "ready" && areaNaturalEvents.length === 0 && <p>No supported point events intersect this area.</p>}
+            {(areaNaturalEvents.length > 0 ? areaNaturalEvents : naturalEvents.slice(0, 3)).slice(0, 3).map((record) => (
+              <button key={record.id} className={`evidenceResult ${selectedObservation === record.id ? "selected" : ""}`} onClick={() => { setSelectedObservation(record.id); setPanel("uncertainty"); }}>
+                <strong>{record.title}</strong><span>{String(record.attributes.category)} · {new Date(record.observedAt).toLocaleDateString()}</span>
+              </button>
+            ))}
           </div>
 
           <div className="earthquakeResults" aria-live="polite">
@@ -305,7 +345,10 @@ export default function Home() {
         >
           <ArcgisInvestigationMap
             area={selection}
-            evidence={activeLayers.includes("earthquakes") ? mapEarthquakes : []}
+            evidence={[
+              ...(activeLayers.includes("earthquakes") ? mapEarthquakes : []),
+              ...(activeLayers.includes("natural-events") ? mapNaturalEvents : []),
+            ]}
             selectedEvidenceId={selectedObservation}
             onEvidenceSelect={(id) => { setSelectedObservation(id); setPanel("uncertainty"); }}
             onAreaChange={(nextArea) => { setSelection(nextArea); log("You revised the investigation area.", "human"); }}
@@ -326,8 +369,8 @@ export default function Home() {
               <p className="eyebrow">EVIDENCE, NOT A VERDICT</p>
               <strong>{selected ? selected.title : "Evidence needs context"}</strong>
               <p>{selected ? selected.limitation : "Select a live USGS event from the map or evidence list to inspect its provenance and limitations."}</p>
-              <div className="sourceStrip"><span>{selected ? "USGS" : "Public sources"}</span><span>{selected ? new Date(selected.observedAt).toLocaleString() : "live when available"}</span></div>
-              {selected && <a className="sourceLink" href={selected.sourceUrl} target="_blank" rel="noreferrer">Open authoritative USGS record ↗</a>}
+              <div className="sourceStrip"><span>{selected ? selected.provider === "usgs" ? "USGS" : "NASA EONET + origin" : "Public sources"}</span><span>{selected ? new Date(selected.observedAt).toLocaleString() : "live when available"}</span></div>
+              {selected && <a className="sourceLink" href={selected.sourceUrl} target="_blank" rel="noreferrer">Open originating source record ↗</a>}
               <button className="textAction" onClick={() => { setPanel("activity"); log("You asked the agent to inspect uncertainty.", "human"); }}>Ask the agent to investigate →</button>
             </div>
           )}
