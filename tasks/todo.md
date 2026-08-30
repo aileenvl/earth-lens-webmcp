@@ -168,13 +168,13 @@ coordinate with required Open-Meteo and CAMS attribution.
 
 **Acceptance criteria:**
 
-- [ ] Coordinate changes abort the previous request and fetch the new location.
-- [ ] Values, units, model/forecast nature, update time, and attribution display.
-- [ ] Unsupported or unavailable values never render as zero or measured sensors.
+- [x] Coordinate changes abort the previous request and fetch the new location.
+- [x] Values, units, model/forecast nature, update time, and attribution display.
+- [x] Unsupported or unavailable values never render as zero or measured sensors.
 
 **Verification:**
 
-- [ ] Air-quality fixture tests cover valid, missing, error, and abort states.
+- [x] Air-quality fixture tests cover valid, missing, error, and abort states.
 - [ ] Browser check distinguishes modelled air quality from observed earthquakes.
 
 **Dependencies:** T05
