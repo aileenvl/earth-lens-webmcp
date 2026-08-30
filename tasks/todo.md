@@ -264,14 +264,14 @@ provenance-rich draft that a person can revise but not publish.
 
 **Acceptance criteria:**
 
-- [ ] Coverage analysis distinguishes ready, empty, unavailable, stale, and modelled.
-- [ ] Draft contains area, window, summary, gaps, citations, creation time, and
+- [x] Coverage analysis distinguishes ready, empty, unavailable, stale, and modelled.
+- [x] Draft contains area, window, summary, gaps, citations, creation time, and
       immutable draft status.
 - [ ] Human edits create a new revision and no outbound side effect exists.
 
 **Verification:**
 
-- [ ] Review-domain tests cover missing providers, citation retention, and edits.
+- [x] Review-domain tests cover missing providers, citation retention, and edits.
 - [ ] Exact eight-step collaboration demo succeeds from a fresh session.
 
 **Dependencies:** T10

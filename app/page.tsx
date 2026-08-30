@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
+import { analyzeCoverage } from "./domain/review/coverage.ts";
+import { createSituationLensDraft } from "./domain/review/lens.ts";
 import type { EvidenceRecord, InvestigationArea, SourceState, TimeWindow } from "./domain/types.ts";
 import { fetchAirQuality } from "./sources/air-quality.ts";
 import { fetchEonetEvidence } from "./sources/eonet.ts";
@@ -163,15 +165,16 @@ export default function Home() {
     };
     const allEvidence = () => [...stateRef.current.earthquakes, ...stateRef.current.naturalEvents, ...(stateRef.current.airQuality ? [stateRef.current.airQuality] : [])];
     const scopedEvidence = () => [...stateRef.current.areaEarthquakes, ...stateRef.current.areaNaturalEvents, ...(stateRef.current.airQuality ? [stateRef.current.airQuality] : [])];
+    const sourceStates = () => ({ usgs: stateRef.current.earthquakeState, eonet: stateRef.current.naturalEventState, "open-meteo": stateRef.current.airQualityState });
     const tools = createEarthLensTools({
-      getState: () => ({ activeLayers: stateRef.current.activeLayers, timeWindow: stateRef.current.timeWindow, selection: stateRef.current.selection, evidence: scopedEvidence(), areaEvidence: scopedEvidence(), sourceStates: { usgs: stateRef.current.earthquakeState, eonet: stateRef.current.naturalEventState, "open-meteo": stateRef.current.airQualityState }, revision: revisionRef.current }),
+      getState: () => ({ activeLayers: stateRef.current.activeLayers, timeWindow: stateRef.current.timeWindow, selection: stateRef.current.selection, evidence: scopedEvidence(), areaEvidence: scopedEvidence(), sourceStates: sourceStates(), revision: revisionRef.current }),
       listSources: () => Object.entries(layerInfo).map(([id, source]) => ({ id, ...source })),
       setLayerVisibility: (layerId, visible) => { rememberAgentChange(); setActiveLayers((current) => visible ? [...new Set([...current, layerId])] : current.filter((item) => item !== layerId)); log(`Agent ${visible ? "showed" : "hid"} the ${layerInfo[layerId].label.toLowerCase()} layer.`); return { layerId, visible, revision: revisionRef.current, reversible: true }; },
       setTimeWindow: (window) => { rememberAgentChange(); changeTimeWindow(window); log(`Agent changed the evidence window to ${window}.`); return { window, revision: revisionRef.current, reversible: true }; },
       setArea: (area) => { rememberAgentChange(); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(area); log(`Agent focused the map on “${area.label}”.`); return { area, revision: revisionRef.current, reversible: true }; },
       inspectEvidence: (id) => { const item = allEvidence().find((record) => record.id === id) ?? null; if (item) { setSelectedObservation(item.id); setPanel("uncertainty"); log(`Agent inspected ${item.title} and surfaced its limitation.`); } return item; },
-      analyzeCoverage: () => { setPanel("uncertainty"); log("Agent surfaced evidence gaps and modelled coverage."); return { revision: revisionRef.current, sources: { usgs: stateRef.current.earthquakeState, eonet: stateRef.current.naturalEventState, "open-meteo": { ...stateRef.current.airQualityState, evidenceType: "modelled" } }, limitations: stateRef.current.activeLayers.map((id) => ({ layer: id, limitation: layerInfo[id].limitation })), warning: "No displayed observation is an official emergency alert." }; },
-      createLensDraft: (title) => { setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return { title, status: "draft", createdAt: new Date().toISOString(), revision: revisionRef.current, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), citations: scopedEvidence().map((record) => record.sourceUrl) }; },
+      analyzeCoverage: () => { setPanel("uncertainty"); log("Agent surfaced evidence gaps and modelled coverage."); return { revision: revisionRef.current, coverage: analyzeCoverage(sourceStates(), scopedEvidence()), limitations: stateRef.current.activeLayers.map((id) => ({ layer: id, limitation: layerInfo[id].limitation })), warning: "No displayed observation is an official emergency alert." }; },
+      createLensDraft: (title) => { setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); },
       undoLastAgentChange: () => { const snapshot = agentUndoRef.current.pop(); if (!snapshot) return { undone: false, reason: "No reversible agent change is available." }; setActiveLayers(snapshot.activeLayers); changeTimeWindow(snapshot.timeWindow); setSelection(snapshot.selection); revisionRef.current += 1; log("Agent undid its last workspace change."); return { undone: true, revision: revisionRef.current, restoredFromRevision: snapshot.revision }; },
     });
     const registration = registerWebMcpTools(document.modelContext, tools);
