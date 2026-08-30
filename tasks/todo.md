@@ -57,7 +57,7 @@ activity, error, revision, and reversible-operation contracts.
 
 - [x] T01 and T02 acceptance criteria pass.
 - [x] Quality checks finish within their agreed budgets or have measured evidence.
-- [ ] Human reviews the first domain contract before ArcGIS integration.
+- [x] Human reviews the first domain contract before ArcGIS integration.
 
 ## T03 — Normalize live USGS evidence
 
@@ -66,16 +66,17 @@ and normalize earthquake records with reviewed/preliminary semantics.
 
 **Acceptance criteria:**
 
-- [ ] 24-hour, 7-day, and 30-day windows map to documented USGS feeds.
-- [ ] Malformed, empty, aborted, timed-out, and HTTP-error responses return
+- [x] 24-hour, 7-day, and 30-day windows map to documented USGS feeds.
+- [x] Malformed, empty, aborted, timed-out, and HTTP-error responses return
       structured source states without contaminating workspace evidence.
-- [ ] Normalized records retain source URL, observed/updated time, coordinates,
+- [x] Normalized records retain source URL, observed/updated time, coordinates,
       magnitude, status, and limitation.
 
 **Verification:**
 
-- [ ] USGS adapter tests pass against minimal captured fixtures.
-- [ ] A live development request returns at least a valid source state.
+- [x] USGS adapter tests pass against minimal captured fixtures.
+- [x] A live development request returns a valid ready state (164 records on
+      2026-08-29).
 
 **Dependencies:** T02
 **Files likely touched:** `app/sources/core/result.ts`,

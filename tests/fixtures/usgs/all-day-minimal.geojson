@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "generated": 1788064753000,
+    "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "count": 1
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ci41539016",
+      "properties": {
+        "mag": 1.02,
+        "place": "14 km NE of Big Bear City, CA",
+        "time": 1788064172550,
+        "updated": 1788064378907,
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci41539016",
+        "status": "automatic",
+        "type": "earthquake",
+        "net": "ci",
+        "code": "41539016"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-116.722666666667, 34.3298333333333, 1.55]
+      }
+    }
+  ]
+}
