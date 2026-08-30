@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
+import type { InvestigationArea } from "./domain/types.ts";
+
 type LayerId = "earthquakes" | "air-quality" | "thermal";
-type TimeWindow = "12h" | "24h" | "7d";
+type TimeWindow = "24h" | "7d" | "30d";
 type Activity = { id: number; text: string; kind: "agent" | "human"; time: string };
 type ModelContextTool = {
   name: string;
@@ -55,7 +58,13 @@ const stamp = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute:
 export default function Home() {
   const [activeLayers, setActiveLayers] = useState<LayerId[]>(["earthquakes", "air-quality", "thermal"]);
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("24h");
-  const [selection, setSelection] = useState({ x: 52, y: 51, radius: 17, label: "Monterrey region" });
+  const [selection, setSelection] = useState<InvestigationArea>({
+    latitude: 25.6866,
+    longitude: -100.3161,
+    radiusKm: 100,
+    label: "Monterrey region",
+    updatedBy: "human",
+  });
   const [selectedObservation, setSelectedObservation] = useState<string | null>(null);
   const [panel, setPanel] = useState<"uncertainty" | "activity" | "about" | "lens" | null>("uncertainty");
   const [activity, setActivity] = useState<Activity[]>([
@@ -126,7 +135,7 @@ export default function Home() {
       {
         name: "set_time_window",
         description: "Change the shared investigation time window. This visibly updates the map timeline.",
-        inputSchema: { type: "object", properties: { window: { type: "string", enum: ["12h", "24h", "7d"] } }, required: ["window"], additionalProperties: false },
+        inputSchema: { type: "object", properties: { window: { type: "string", enum: ["24h", "7d", "30d"] } }, required: ["window"], additionalProperties: false },
         execute: async ({ window }) => {
           setTimeWindow(window as TimeWindow);
           log(`Agent changed the evidence window to ${window}.`);
@@ -135,10 +144,10 @@ export default function Home() {
       },
       {
         name: "set_geographic_area",
-        description: "Move the investigation circle on the current map using percentage coordinates, preserving a visible region the human can adjust.",
-        inputSchema: { type: "object", properties: { x: { type: "number", minimum: 15, maximum: 85 }, y: { type: "number", minimum: 15, maximum: 80 }, radius: { type: "number", minimum: 8, maximum: 28 }, label: { type: "string" } }, required: ["x", "y"], additionalProperties: false },
-        execute: async ({ x, y, radius, label }) => {
-          const next = { x: Number(x), y: Number(y), radius: Number(radius ?? 17), label: String(label ?? "Agent-selected region") };
+        description: "Set the shared WGS84 investigation center and radius. The map and non-map controls visibly update together.",
+        inputSchema: { type: "object", properties: { latitude: { type: "number", minimum: -90, maximum: 90 }, longitude: { type: "number", minimum: -180, maximum: 180 }, radiusKm: { type: "number", exclusiveMinimum: 0, maximum: 2000 }, label: { type: "string" } }, required: ["latitude", "longitude", "radiusKm"], additionalProperties: false },
+        execute: async ({ latitude, longitude, radiusKm, label }) => {
+          const next: InvestigationArea = { latitude: Number(latitude), longitude: Number(longitude), radiusKm: Number(radiusKm), label: String(label ?? "Agent-selected region"), updatedBy: "agent" };
           setSelection(next);
           log(`Agent focused the map on “${next.label}”.`);
           return json(next);
@@ -150,10 +159,9 @@ export default function Home() {
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
         execute: async () => {
           const s = stateRef.current;
-          const hits = observations.filter((o) => s.activeLayers.includes(o.layer) && Math.hypot(o.x - s.selection.x, o.y - s.selection.y) <= s.selection.radius);
           setPanel("activity");
-          log(`Agent queried your region and found ${hits.length} visible observations.`);
-          return json({ selection: s.selection, count: hits.length, observations: hits, caution: "Proximity does not establish causation or impact." });
+          log("Agent inspected your region; live spatial evidence is still connecting.");
+          return json({ selection: s.selection, status: "source_not_connected", observations: [], caution: "No spatial result is returned until the live source is connected." });
         },
       },
       {
@@ -245,30 +253,13 @@ export default function Home() {
           aria-label="Environmental evidence map centered on Monterrey"
           role="region"
         >
-          <div className="mapGrid" />
-          <div className="terrain terrainOne" /><div className="terrain terrainTwo" /><div className="terrain terrainThree" />
-          <div className="road roadOne" /><div className="road roadTwo" /><div className="road roadThree" />
-          <div className="place monterrey">MONTERREY</div><div className="place saltillo">SALTILLO</div><div className="place linares">LINARES</div>
-          <div className="region" style={{ left: `${selection.x}%`, top: `${selection.y}%`, width: `${selection.radius * 2}%`, height: `${selection.radius * 2}%` }}><span>{selection.label}</span></div>
-
-          {observations.filter((item) => activeLayers.includes(item.layer)).map((item) => (
-            <button
-              key={item.id}
-              className={`marker ${item.layer} ${selectedObservation === item.id ? "selected" : ""}`}
-              style={{ left: `${item.x}%`, top: `${item.y}%` }}
-              onClick={() => { setSelectedObservation(item.id); setPanel("uncertainty"); log(`You inspected ${item.title}.`, "human"); }}
-              aria-label={`Inspect ${item.title}`}
-            ><i>{item.value}</i></button>
-          ))}
-
-          <div className="mapHint">Select an observation to inspect its evidence</div>
-          <div className="mapTools"><button aria-label="Zoom in">＋</button><button aria-label="Zoom out">−</button><button aria-label="Locate selection">⌖</button></div>
+          <ArcgisInvestigationMap area={selection} onAreaChange={(nextArea) => { setSelection(nextArea); log("You revised the investigation area.", "human"); }} />
           <div className="timebar">
             <button aria-label="Previous time window">◀</button>
-            <div><span style={{ width: timeWindow === "12h" ? "42%" : timeWindow === "24h" ? "72%" : "92%" }} /><i style={{ left: timeWindow === "12h" ? "42%" : timeWindow === "24h" ? "72%" : "92%" }} /></div>
+            <div><span style={{ width: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /><i style={{ left: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /></div>
             <button aria-label="Next time window">▶</button>
             <select aria-label="Evidence time window" value={timeWindow} onChange={(event) => { setTimeWindow(event.target.value as TimeWindow); log(`You changed the evidence window to ${event.target.value}.`, "human"); }}>
-              <option value="12h">Last 12 hours</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option>
+              <option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option>
             </select>
           </div>
           <div className="legend">{(Object.keys(layerInfo) as LayerId[]).filter((id) => activeLayers.includes(id)).map((id) => <span key={id}><i className={layerInfo[id].color} /> {layerInfo[id].label}</span>)}</div>

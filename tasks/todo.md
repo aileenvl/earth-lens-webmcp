@@ -92,15 +92,16 @@ state and non-map controls.
 
 **Acceptance criteria:**
 
-- [ ] ArcGIS never executes during server rendering and cleans up on unmount.
-- [ ] A person can pan, zoom, enter coordinates/radius, and revise the selection.
-- [ ] Attribution, loading/error fallback, keyboard controls, and textual
+- [x] ArcGIS never executes during server rendering and cleans up on unmount.
+- [x] A person can pan, zoom, enter coordinates/radius, and revise the selection.
+- [x] Attribution, loading/error fallback, keyboard controls, and textual
       investigation state remain available without the map canvas.
 
 **Verification:**
 
-- [ ] Render test passes without DOM-global errors.
-- [ ] Browser check confirms map load and keyboard-accessible selection update.
+- [x] Render/source test passes without DOM-global errors.
+- [x] Browser check confirms ArcGIS 5.1 map load, OSM attribution, geodesic
+      selection, and labeled keyboard-accessible area controls.
 
 **Dependencies:** T02
 **Files likely touched:** `app/components/map/ArcgisMap.tsx`,

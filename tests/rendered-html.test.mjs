@@ -47,3 +47,16 @@ test("keeps the WebMCP integration in the application source", async () => {
   assert.match(page, /create_situation_lens/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
 });
+
+test("keeps ArcGIS browser-only and provides non-map area controls", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const map = await readFile(new URL("../app/components/ArcgisInvestigationMap.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /ArcgisInvestigationMap/);
+  assert.match(map, /https:\/\/js\.arcgis\.com\/5\.1\//);
+  assert.match(map, /\$arcgis.*import/s);
+  assert.match(map, /aria-label="Edit investigation area"/);
+  assert.match(map, /Latitude/);
+  assert.match(map, /Radius \(km\)/);
+  assert.doesNotMatch(map, /^import .*@arcgis/m);
+});
