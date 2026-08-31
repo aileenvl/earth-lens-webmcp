@@ -210,7 +210,7 @@ unavailable, timeout, cancellation, and stale-request behavior.
 
 - [x] USGS, NASA EONET, and Open-Meteo/CAMS operate together.
 - [x] Each provider can fail without a misleading blank or global failure.
-- [ ] Evidence types and limitations remain visible at mobile and desktop widths.
+- [x] Evidence types and limitations remain visible at mobile and desktop widths.
 
 ## T09 — Register WebMCP discovery and read tools
 
@@ -267,7 +267,7 @@ provenance-rich draft that a person can revise but not publish.
 - [x] Coverage analysis distinguishes ready, empty, unavailable, stale, and modelled.
 - [x] Draft contains area, window, summary, gaps, citations, creation time, and
       immutable draft status.
-- [ ] Human edits create a new revision and no outbound side effect exists.
+- [x] Human edits create a new revision and no outbound side effect exists.
 
 **Verification:**
 
@@ -295,16 +295,16 @@ constraint against the integrated release candidate.
 **Acceptance criteria:**
 
 - [ ] Zero critical/serious axe findings and keyboard-only core flow succeeds.
-- [ ] No secrets/high dependency vulnerabilities or unsafe external URLs.
-- [ ] LCP/CLS are measured; blocking performance regressions are resolved and
+- [x] No secrets/high dependency vulnerabilities or unsafe external URLs.
+- [x] LCP/CLS are measured; blocking performance regressions are resolved and
       unavoidable ArcGIS bundle cost is documented.
 
 **Verification:**
 
-- [ ] `npm run check:task`
-- [ ] `npm run check:a11y -- <preview-url>`
-- [ ] `npm run check:performance -- <preview-url>`
-- [ ] Browser console/network/responsive checks pass.
+- [x] `npm run check:task`
+- [x] `npm run check:a11y -- <preview-url>`
+- [x] `npm run check:performance -- <preview-url>`
+- [x] Browser console/network/responsive checks pass.
 
 **Dependencies:** T11
 **Files likely touched:** `app/globals.css`, `app/layout.tsx`, `app/page.tsx`,
@@ -319,7 +319,7 @@ architecture, and preserve rollback information.
 **Acceptance criteria:**
 
 - [ ] URL works from a fresh unsigned-in supported browser.
-- [ ] Repository is public with MIT license, setup, tool table, attribution,
+- [x] Repository is public with MIT license, setup, tool table, attribution,
       limitations, architecture, screenshots, and test instructions.
 - [ ] Release tag and previous deployment provide reproducible rollback points.
 
