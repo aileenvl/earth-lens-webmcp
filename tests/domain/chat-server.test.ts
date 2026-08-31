@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { requestAssistantPlan } from "../../app/chat/server.ts";
+
+test("chat server keeps the key in authorization, disables storage, and validates structured output", async () => {
+  let captured: { url?: string; init?: RequestInit } = {};
+  const fetcher: typeof fetch = async (url, init) => {
+    captured = { url: String(url), init };
+    return new Response(JSON.stringify({
+      output: [{
+        type: "message",
+        content: [{ type: "output_text", text: JSON.stringify({ answer: "No events are reported in this area.", actions: [] }) }],
+      }],
+    }), { status: 200 });
+  };
+
+  const result = await requestAssistantPlan({
+    message: "What is happening?",
+    history: [],
+    workspace: { activeLayers: ["earthquakes"], timeWindow: "24h", selection: { latitude: 25, longitude: -100, radiusKm: 100, label: "Test" }, sourceStates: { usgs: { status: "empty" } }, evidence: [] },
+  }, { apiKey: "secret-test-key", fetcher });
+
+  assert.equal(result.answer, "No events are reported in this area.");
+  assert.equal(captured.url, "https://api.openai.com/v1/responses");
+  assert.equal(new Headers(captured.init?.headers).get("authorization"), "Bearer secret-test-key");
+  const body = JSON.parse(String(captured.init?.body));
+  assert.equal(body.store, false);
+  assert.equal(body.text.format.type, "json_schema");
+  assert.match(body.instructions, /Only propose actions the person explicitly requests/);
+  assert.match(body.instructions, /create a draft only when the person asks/);
+});
+
+test("chat server does not expose upstream error details", async () => {
+  const fetcher: typeof fetch = async () => new Response("sensitive upstream detail", { status: 500 });
+  await assert.rejects(
+    requestAssistantPlan({ message: "hello", history: [], workspace: { activeLayers: [], timeWindow: "24h", selection: { latitude: 0, longitude: 0, radiusKm: 10, label: "Test" }, sourceStates: {}, evidence: [] } }, { apiKey: "key", fetcher }),
+    /Assistant service is temporarily unavailable/,
+  );
+});

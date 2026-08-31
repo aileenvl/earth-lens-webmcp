@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
+import { AssistantChat } from "./components/AssistantChat.tsx";
+import type { AssistantAction, ChatWorkspace } from "./chat/contract.ts";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
 import { analyzeCoverage } from "./domain/review/coverage.ts";
 import { createSituationLensDraft } from "./domain/review/lens.ts";
+import { stepTimeWindow as getSteppedTimeWindow } from "./domain/time-window.ts";
 import type { EvidenceRecord, InvestigationArea, SourceState, TimeWindow } from "./domain/types.ts";
 import { fetchAirQuality } from "./sources/air-quality.ts";
 import { fetchEonetEvidence } from "./sources/eonet.ts";
@@ -74,6 +77,7 @@ export default function Home() {
   const [toolsReady, setToolsReady] = useState(false);
   const revisionRef = useRef(0);
   const agentUndoRef = useRef<Array<{ activeLayers: LayerId[]; timeWindow: TimeWindow; selection: InvestigationArea; revision: number }>>([]);
+  const earthLensToolsRef = useRef<ModelContextTool[]>([]);
   const selectionLatitude = selection.latitude;
   const selectionLongitude = selection.longitude;
   const areaEarthquakes = filterEvidenceForArea(earthquakes, selection);
@@ -147,6 +151,18 @@ export default function Home() {
     setActivity((items) => [{ id: Date.now() + Math.random(), text, kind, time: stamp() }, ...items].slice(0, 12));
   }, []);
 
+  const chooseTimeWindow = useCallback((window: TimeWindow) => {
+    agentUndoRef.current = [];
+    revisionRef.current += 1;
+    changeTimeWindow(window);
+    log(`You changed the evidence window to ${window}.`, "human");
+  }, [changeTimeWindow, log]);
+
+  const stepTimeWindow = useCallback((direction: "previous" | "next") => {
+    const nextWindow = getSteppedTimeWindow(timeWindow, direction);
+    if (nextWindow !== timeWindow) chooseTimeWindow(nextWindow);
+  }, [chooseTimeWindow, timeWindow]);
+
   const toggleLayer = useCallback((layer: LayerId, fromAgent = false) => {
     if (!fromAgent) { agentUndoRef.current = []; revisionRef.current += 1; }
     setActiveLayers((current) => {
@@ -177,10 +193,38 @@ export default function Home() {
       createLensDraft: (title) => { setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); },
       undoLastAgentChange: () => { const snapshot = agentUndoRef.current.pop(); if (!snapshot) return { undone: false, reason: "No reversible agent change is available." }; setActiveLayers(snapshot.activeLayers); changeTimeWindow(snapshot.timeWindow); setSelection(snapshot.selection); revisionRef.current += 1; log("Agent undid its last workspace change."); return { undone: true, revision: revisionRef.current, restoredFromRevision: snapshot.revision }; },
     });
+    earthLensToolsRef.current = tools;
     const registration = registerWebMcpTools(document.modelContext, tools);
     void registration.ready.then(setToolsReady).catch(() => setToolsReady(false));
     return registration.cleanup;
   }, [changeTimeWindow, log]);
+
+  const executeAssistantAction = useCallback(async (action: AssistantAction) => {
+    const tool = earthLensToolsRef.current.find((candidate) => candidate.name === action.name);
+    if (!tool) return `Could not run ${action.name}.`;
+    const input: Record<string, unknown> = action.name === "set_time_window" ? { window: action.window }
+      : action.name === "set_layer_visibility" ? { layerId: action.layerId, visible: action.visible }
+      : action.name === "set_geographic_area" ? { latitude: action.latitude, longitude: action.longitude, radiusKm: action.radiusKm, ...(action.label ? { label: action.label } : {}) }
+      : action.name === "inspect_observation" ? { observationId: action.observationId }
+      : action.name === "create_situation_lens_draft" ? (action.title ? { title: action.title } : {})
+      : {};
+    const result = await tool.execute(input);
+    const envelope = JSON.parse(result.content[0]?.text ?? "{}") as { ok?: boolean; error?: { message?: string } };
+    if (!envelope.ok) return envelope.error?.message ?? `Could not run ${action.name}.`;
+    const summaries: Record<AssistantAction["name"], string> = {
+      get_workspace_state: "Read the current workspace",
+      list_authoritative_sources: "Checked source provenance",
+      set_layer_visibility: `Updated the ${action.layerId ?? "requested"} layer`,
+      set_time_window: `Changed the time range to ${action.window ?? "the requested window"}`,
+      set_geographic_area: `Updated the investigation area${action.label ? ` to ${action.label}` : ""}`,
+      query_selected_area: "Queried the selected area",
+      inspect_observation: "Opened the requested evidence record",
+      analyze_evidence_coverage: "Opened evidence coverage and limitations",
+      create_situation_lens_draft: "Created a situation lens draft for review",
+      undo_last_agent_change: "Undid the latest safe agent change",
+    };
+    return summaries[action.name];
+  }, []);
 
   const selected = [...earthquakes, ...naturalEvents, ...(airQuality ? [airQuality] : [])].find((item) => item.id === selectedObservation);
 
@@ -198,11 +242,16 @@ export default function Home() {
           <h1>What’s happening around Monterrey?</h1>
           <p className="lede">A shared evidence workspace for you and your agent.</p>
 
-          <button className="promptCard" onClick={() => setPanel("activity")}>
-            <div className="agentRow"><span className="agentIcon">✦</span><strong>Ask your agent</strong><span className="liveTag">WEBMCP</span></div>
-            <p>“Show environmental activity that may affect this area today.”</p>
-            <div className="chips"><span>Current selection</span><span>Last {timeWindow}</span></div>
-          </button>
+          <AssistantChat
+            workspace={{
+              activeLayers,
+              timeWindow,
+              selection: { latitude: selection.latitude, longitude: selection.longitude, radiusKm: selection.radiusKm, label: selection.label },
+              sourceStates: { usgs: { status: earthquakeState.status }, eonet: { status: naturalEventState.status }, "open-meteo": { status: airQualityState.status } },
+              evidence: [...areaEarthquakes, ...areaNaturalEvents, ...(airQuality ? [airQuality] : [])].map((item) => ({ id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation })),
+            } satisfies ChatWorkspace}
+            onAction={executeAssistantAction}
+          />
 
           <div className="sectionHead"><span>LIVE SIGNALS</span><span>{activeLayers.length}/3</span></div>
           <div className="signalList">
@@ -281,13 +330,13 @@ export default function Home() {
             onEvidenceSelect={(id) => { setSelectedObservation(id); setPanel("uncertainty"); }}
             onAreaChange={(nextArea) => { agentUndoRef.current = []; revisionRef.current += 1; setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(nextArea); log("You revised the investigation area.", "human"); }}
           />
-          <div className="timebar">
-            <button aria-label="Previous time window">◀</button>
-            <div><span style={{ width: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /><i style={{ left: timeWindow === "24h" ? "42%" : timeWindow === "7d" ? "72%" : "92%" }} /></div>
-            <button aria-label="Next time window">▶</button>
-            <select aria-label="Evidence time window" value={timeWindow} onChange={(event) => { agentUndoRef.current = []; revisionRef.current += 1; changeTimeWindow(event.target.value as TimeWindow); log(`You changed the evidence window to ${event.target.value}.`, "human"); }}>
+          <div className="timebar" role="group" aria-label="Choose evidence time window">
+            <button aria-label="Previous time window" disabled={timeWindow === "24h"} onClick={() => stepTimeWindow("previous")}>◀</button>
+            <label htmlFor="evidence-time-window">Time range</label>
+            <select id="evidence-time-window" value={timeWindow} onChange={(event) => chooseTimeWindow(event.target.value as TimeWindow)}>
               <option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option>
             </select>
+            <button aria-label="Next time window" disabled={timeWindow === "30d"} onClick={() => stepTimeWindow("next")}>▶</button>
           </div>
           <div className="legend">{(Object.keys(layerInfo) as LayerId[]).filter((id) => activeLayers.includes(id)).map((id) => <span key={id}><i className={layerInfo[id].color} /> {layerInfo[id].label}</span>)}</div>
 

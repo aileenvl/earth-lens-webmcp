@@ -3,6 +3,7 @@
 ## Setup before recording
 
 - Use Chrome with WebMCP enabled and a fresh Earth Lens session.
+- Sign in with ChatGPT so the embedded assistant is ready.
 - Keep DevTools closed; zoom so the map, evidence panel, and agent are legible.
 - Confirm all three live-source checks are green.
 - Record system audio/microphone and show the URL once.
@@ -22,9 +23,13 @@ Change the investigation radius or time window in the visible UI.
 “I provide the local context. This selection is the shared source of truth—not
 hidden chat state.”
 
+Type **“What is happening around Monterrey right now?”** in the visible
+assistant and show that it answers from the current evidence without changing
+the map.
+
 ## 0:45–1:10 — Agent reads structured evidence
 
-Ask: **“Use Earth Lens tools to inspect my current selection, list the sources,
+Ask the browser agent: **“Use Earth Lens tools to inspect my current selection, list the sources,
 and explain evidence coverage and limitations.”**
 
 Show the tool calls and the source-aware result. Point out empty versus

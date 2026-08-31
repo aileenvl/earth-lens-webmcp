@@ -23,8 +23,10 @@ reliable.
 
 ## How it creates a better user experience
 
-The person no longer needs to understand every filter, layer, coordinate, or
-provider convention before asking a meaningful question. They still keep the
+The person can ask a question in natural language without first understanding
+every filter, layer, coordinate, or provider convention. The embedded assistant
+uses the same allowlisted operations exposed through WebMCP, while an external
+browser agent can discover them directly. The person still keeps the
 visual map and final judgment. Agent operations appear in the same controls,
 carry attribution and revisions, and remain reversible. Human corrections
 immediately govern the agent’s next result.

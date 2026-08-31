@@ -62,3 +62,23 @@ test("keeps ArcGIS browser-only and provides non-map area controls", async () =>
   assert.match(map, /Radius \(km\)/);
   assert.doesNotMatch(map, /^import .*@arcgis/m);
 });
+
+test("time-window controls are real labelled controls rather than a decorative slider", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /stepTimeWindow\("previous"\)/);
+  assert.match(page, /stepTimeWindow\("next"\)/);
+  assert.match(page, /Choose evidence time window/);
+  assert.doesNotMatch(page, /<div><span style=\{\{ width:/);
+});
+
+test("renders a real natural-language assistant form instead of a hard-coded prompt card", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const chat = await readFile(new URL("../app/components/AssistantChat.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /<AssistantChat/);
+  assert.match(chat, /<form/);
+  assert.match(chat, /fetch\("\/api\/chat"/);
+  assert.match(chat, /Ask Earth Lens/);
+  assert.doesNotMatch(page, /Show environmental activity that may affect this area today/);
+});

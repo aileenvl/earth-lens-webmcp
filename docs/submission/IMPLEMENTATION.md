@@ -15,7 +15,17 @@ produce a reviewable draft; there is no send or publish operation.
    contract. Abort signals and revision checks discard stale responses.
 4. ArcGIS and the textual evidence surface render the same normalized records.
 5. WebMCP tools call the same domain operations as the human UI.
-6. Coverage analysis and lens drafting use only the current selected area.
+6. The embedded assistant maps natural language to the same allowlisted tool
+   executors; structured output is validated again before any action runs.
+7. Coverage analysis and lens drafting use only the current selected area.
+
+## Natural-language interaction
+
+Signed-in visitors can ask questions directly in the app. A bounded evidence
+snapshot and short conversation history go to the OpenAI Responses API with
+storage disabled. The API key remains server-side. Both request and model output
+are validated, actions are restricted to the ten Earth Lens operations, and a
+question does not trigger a mutation unless the person explicitly asks for one.
 
 ## WebMCP implementation
 

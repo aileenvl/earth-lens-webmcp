@@ -67,10 +67,13 @@ complete human interface and show that agent tools are unavailable.
 
 ## Architecture
 
-The React UI, ArcGIS adapter, and WebMCP layer all call the same framework-free
-domain operations. Public-provider adapters normalize external responses into
-one evidence contract. Request cancellation and revision checks prevent stale
-results from overwriting newer human choices. See
+The React UI, embedded natural-language assistant, ArcGIS adapter, and WebMCP
+layer all call the same framework-free domain operations. The assistant turns
+plain-language requests into validated, allowlisted tool actions; the browser
+agent can discover and call those same operations through WebMCP. Public-provider
+adapters normalize external responses into one evidence contract. Request
+cancellation and revision checks prevent stale results from overwriting newer
+human choices. See
 [architecture decisions](docs/ARCHITECTURE.md) and the
 [implementation notes](docs/submission/IMPLEMENTATION.md).
 
@@ -80,11 +83,16 @@ Prerequisite: Node.js 22.13 or newer.
 
 ```bash
 npm install
+cp .env.example .env.local
+# Add your server-side OPENAI_API_KEY to .env.local
 npm run dev
 ```
 
-Open the printed local URL in Chrome with WebMCP enabled. The app needs no API
-keys for its current public data sources.
+Open the printed local URL in Chrome with WebMCP enabled. The environmental
+sources need no keys. The optional embedded assistant requires ChatGPT sign-in
+and a server-side OpenAI API key; the key is never sent to the browser. Questions
+and the current evidence snapshot are sent to OpenAI with response storage
+disabled.
 
 ## Verify
 
