@@ -318,14 +318,14 @@ architecture, and preserve rollback information.
 
 **Acceptance criteria:**
 
-- [ ] URL works from a fresh unsigned-in supported browser.
-- [x] Repository is public with MIT license, setup, tool table, attribution,
+- [x] URL works from a fresh unsigned-in supported browser.
+- [ ] Repository is public with MIT license, setup, tool table, attribution,
       limitations, architecture, screenshots, and test instructions.
 - [ ] Release tag and previous deployment provide reproducible rollback points.
 
 **Verification:**
 
-- [ ] Fresh clone installs and passes release checks.
+- [x] Fresh clone installs and passes release checks.
 - [ ] Every provider failure simulation passes against the public candidate.
 - [ ] Exact demo succeeds twice.
 
