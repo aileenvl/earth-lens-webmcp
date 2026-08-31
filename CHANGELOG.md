@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0-rc.1 — 2026-08-30
+## 1.0.0-rc.2 — 2026-08-30
 
 - Replaced illustrative prototype data with live USGS, NASA EONET, and
   Open-Meteo/CAMS evidence.
@@ -12,5 +12,5 @@
 - Added source failure isolation, request cancellation, attribution, safety
   boundaries, tests, accessibility checks, and performance budgets.
 
-Rollback: Sites version 4 is the previous deployed checkpoint; version 5 is
-this release candidate.
+Rollback: the annotated `v1.0.0-rc.1` tag identifies this source release, and
+Sites retains the previously deployed checkpoints for rollback.
