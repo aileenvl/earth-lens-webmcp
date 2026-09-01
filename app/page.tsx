@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx";
 import { AirQualityCard } from "./components/AirQualityCard.tsx";
-import { AssistantChat } from "./components/AssistantChat.tsx";
+import { AssistantChat, type AssistantActionResult } from "./components/AssistantChat.tsx";
 import type { AssistantAction, ChatWorkspace } from "./chat/contract.ts";
 import { describeUsAqi, getUsAqiTone } from "./domain/air-quality.ts";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
@@ -206,7 +206,20 @@ export default function Home() {
         setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() });
         setSelection(area);
         log(`Agent resolved “${query}” with ArcGIS and focused the map on ${area.label}.`);
-        return { ok: true as const, data: { area, match: resolution.candidate, revision: revisionRef.current, reversible: true } };
+        const currentAir = await fetchAirQuality({ latitude: area.latitude, longitude: area.longitude });
+        if (currentAir.status === "ready") {
+          setAirQuality(currentAir.data);
+          setAirQualityState({ status: "ready", fetchedAt: currentAir.fetchedAt, count: 1 });
+          setSelectedObservation(currentAir.data.id);
+          setPanel("uncertainty");
+        } else if (currentAir.status === "empty") {
+          setAirQuality(null);
+          setAirQualityState({ status: "empty", fetchedAt: currentAir.fetchedAt, reason: currentAir.reason });
+        } else if (currentAir.code !== "ABORTED") {
+          setAirQuality(null);
+          setAirQualityState({ status: "unavailable", fetchedAt: currentAir.fetchedAt, reason: currentAir.message });
+        }
+        return { ok: true as const, data: { area, match: resolution.candidate, airQuality: currentAir.status === "ready" ? currentAir.data : null, airQualityStatus: currentAir.status, revision: revisionRef.current, reversible: true } };
       },
     });
     earthLensToolsRef.current = tools;
@@ -215,9 +228,9 @@ export default function Home() {
     return registration.cleanup;
   }, [changeTimeWindow, log]);
 
-  const executeAssistantAction = useCallback(async (action: AssistantAction) => {
+  const executeAssistantAction = useCallback(async (action: AssistantAction): Promise<AssistantActionResult> => {
     const tool = earthLensToolsRef.current.find((candidate) => candidate.name === action.name);
-    if (!tool) return `Could not run ${action.name}.`;
+    if (!tool) return { summary: `Could not run ${action.name}.` };
     const input: Record<string, unknown> = action.name === "set_time_window" ? { window: action.window }
       : action.name === "set_layer_visibility" ? { layerId: action.layerId, visible: action.visible }
       : action.name === "set_geographic_area" ? { latitude: action.latitude, longitude: action.longitude, radiusKm: action.radiusKm, ...(action.label ? { label: action.label } : {}) }
@@ -226,8 +239,19 @@ export default function Home() {
       : action.name === "create_situation_lens_draft" ? (action.title ? { title: action.title } : {})
       : {};
     const result = await tool.execute(input);
-    const envelope = JSON.parse(result.content[0]?.text ?? "{}") as { ok?: boolean; error?: { message?: string } };
-    if (!envelope.ok) return envelope.error?.message ?? `Could not run ${action.name}.`;
+    const envelope = JSON.parse(result.content[0]?.text ?? "{}") as { ok?: boolean; data?: { area?: InvestigationArea; airQuality?: EvidenceRecord | null; airQualityStatus?: string }; error?: { message?: string } };
+    if (!envelope.ok) return { summary: envelope.error?.message ?? `Could not run ${action.name}.` };
+    if (action.name === "focus_place" && envelope.data?.airQuality) {
+      const evidence = envelope.data.airQuality;
+      const category = describeUsAqi(Number(evidence.attributes.usAqi));
+      return {
+        summary: `Focused the map on ${envelope.data.area?.label ?? action.query ?? "the requested place"}, refreshed its evidence, and opened the air-quality record`,
+        detail: `${envelope.data.area?.label ?? action.query}: US AQI ${evidence.attributes.usAqi} — ${category.label}. PM2.5 ${evidence.attributes.pm2_5} µg/m³; PM10 ${evidence.attributes.pm10} µg/m³. This is a modelled CAMS estimate, observed ${new Date(evidence.observedAt).toLocaleString()}.`,
+      };
+    }
+    if (action.name === "focus_place" && envelope.data?.airQualityStatus) {
+      return { summary: `Focused the map on ${envelope.data.area?.label ?? action.query ?? "the requested place"}`, detail: "The air-quality source could not return a current estimate for this location. The map moved, but Earth Lens will not invent a value." };
+    }
     const summaries: Record<AssistantAction["name"], string> = {
       get_workspace_state: "Read the current workspace",
       list_authoritative_sources: "Checked source provenance",
@@ -241,7 +265,7 @@ export default function Home() {
       undo_last_agent_change: "Undid the latest safe agent change",
       focus_place: `Focused the map on ${action.query ?? "the requested place"} and refreshed its evidence`,
     };
-    return summaries[action.name];
+    return { summary: summaries[action.name] };
   }, []);
 
   const selected = [...earthquakes, ...naturalEvents, ...(airQuality ? [airQuality] : [])].find((item) => item.id === selectedObservation);

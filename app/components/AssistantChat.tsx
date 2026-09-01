@@ -5,9 +5,10 @@ import { useState, type FormEvent } from "react";
 import { parseAssistantPlan, type AssistantAction, type ChatHistoryItem, type ChatWorkspace } from "../chat/contract.ts";
 
 type Message = ChatHistoryItem & { id: number; actions?: string[] };
+export type AssistantActionResult = { summary: string; detail?: string };
 type AssistantChatProps = {
   workspace: ChatWorkspace;
-  onAction: (action: AssistantAction) => Promise<string>;
+  onAction: (action: AssistantAction) => Promise<AssistantActionResult>;
 };
 
 export function AssistantChat({ workspace, onAction }: AssistantChatProps) {
@@ -39,9 +40,10 @@ export function AssistantChat({ workspace, onAction }: AssistantChatProps) {
       }
       const plan = parseAssistantPlan(body.data);
       if (!plan.ok) throw new Error("Invalid assistant response");
-      const actionResults: string[] = [];
+      const actionResults: AssistantActionResult[] = [];
       for (const action of plan.value.actions) actionResults.push(await onAction(action));
-      setMessages((current) => [...current, { id: Date.now() + 1, role: "assistant", content: plan.value.answer, actions: actionResults }]);
+      const details = actionResults.flatMap((result) => result.detail ? [result.detail] : []);
+      setMessages((current) => [...current, { id: Date.now() + 1, role: "assistant", content: [plan.value.answer, ...details].join("\n\n"), actions: actionResults.map((result) => result.summary) }]);
     } catch {
       setError({ message: "Earth Lens could not reach the assistant. Please try again." });
     } finally {
