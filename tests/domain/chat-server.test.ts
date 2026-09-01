@@ -67,3 +67,16 @@ test("an air-quality follow-up always opens the refreshed evidence", async () =>
 
   assert.deepEqual(result.actions.map(({ name, observationId }) => ({ name, observationId })), [{ name: "inspect_observation", observationId: "cdmx-air" }]);
 });
+
+test("a named city question cannot answer with or inspect the current city's evidence", async () => {
+  const staleAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "monterrey-air", title: null, query: null };
+  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "CDMX has AQI 55.", actions: [staleAction] }) }] }] });
+  const result = await requestAssistantPlan({
+    message: "What is the air quality in CDMX?",
+    history: [],
+    workspace: { activeLayers: ["air-quality"], timeWindow: "24h", selection: { latitude: 25.68, longitude: -100.31, radiusKm: 100, label: "Monterrey" }, sourceStates: {}, evidence: [{ id: "monterrey-air", title: "US AQI 55", provider: "open-meteo", observedAt: "2026-09-01T19:00:00Z", limitation: "Modelled.", facts: ["US AQI 55 (Moderate)"] }] },
+  }, { apiKey: "test-key", fetcher });
+
+  assert.equal(result.answer, "I’ll focus the map on CDMX and refresh the evidence for that area first.");
+  assert.deepEqual(result.actions.map(({ name, query, observationId }) => ({ name, query, observationId })), [{ name: "focus_place", query: "CDMX", observationId: null }]);
+});
