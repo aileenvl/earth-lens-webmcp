@@ -29,6 +29,7 @@ test("chat server keeps the key in authorization, disables storage, and validate
   assert.equal(body.text.format.type, "json_schema");
   assert.match(body.instructions, /Only propose actions the person explicitly requests/);
   assert.match(body.instructions, /create a draft only when the person asks/);
+  assert.match(body.instructions, /event time window does not apply to current air-quality evidence/);
 });
 
 test("chat server does not expose upstream error details", async () => {

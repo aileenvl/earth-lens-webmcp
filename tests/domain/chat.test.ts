@@ -8,13 +8,14 @@ const workspace = {
   timeWindow: "24h",
   selection: { latitude: 25.6866, longitude: -100.3161, radiusKm: 100, label: "Monterrey region" },
   sourceStates: { usgs: { status: "ready" }, eonet: { status: "empty" }, "open-meteo": { status: "ready" } },
-  evidence: [{ id: "usgs-1", title: "M 3.1 test", provider: "usgs", observedAt: "2026-08-30T12:00:00.000Z", limitation: "Preliminary." }],
+  evidence: [{ id: "usgs-1", title: "M 3.1 test", provider: "usgs", observedAt: "2026-08-30T12:00:00.000Z", limitation: "Preliminary.", facts: ["Magnitude 3.1"] }],
 };
 
 test("chat requests accept a bounded prompt and current workspace", () => {
   const result = parseChatRequest({ message: "What is happening here?", history: [], workspace });
   assert.equal(result.ok, true);
   if (result.ok) assert.equal(result.value.workspace.evidence.length, 1);
+  if (result.ok) assert.deepEqual(result.value.workspace.evidence[0].facts, ["Magnitude 3.1"]);
 });
 
 test("chat requests reject empty, oversized, and structurally invalid input", () => {

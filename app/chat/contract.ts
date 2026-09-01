@@ -7,7 +7,7 @@ export type ChatWorkspace = {
   timeWindow: TimeWindow;
   selection: { latitude: number; longitude: number; radiusKm: number; label: string };
   sourceStates: Record<string, { status: string }>;
-  evidence: Array<{ id: string; title: string; provider: string; observedAt: string; limitation: string }>;
+  evidence: Array<{ id: string; title: string; provider: string; observedAt: string; limitation: string; facts: string[] }>;
 };
 export type ChatRequest = { message: string; history: ChatHistoryItem[]; workspace: ChatWorkspace };
 
@@ -48,8 +48,8 @@ export function parseChatRequest(input: unknown): ParseResult<ChatRequest> {
   }
   const evidence: ChatWorkspace["evidence"] = [];
   for (const item of workspace.evidence.slice(0, 50)) {
-    if (!isRecord(item) || typeof item.id !== "string" || typeof item.title !== "string" || typeof item.provider !== "string" || typeof item.observedAt !== "string" || typeof item.limitation !== "string") return { ok: false, error: "Invalid evidence." };
-    evidence.push({ id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation });
+    if (!isRecord(item) || typeof item.id !== "string" || typeof item.title !== "string" || typeof item.provider !== "string" || typeof item.observedAt !== "string" || typeof item.limitation !== "string" || !Array.isArray(item.facts) || item.facts.length > 8 || !item.facts.every((fact) => typeof fact === "string" && fact.length <= 160)) return { ok: false, error: "Invalid evidence." };
+    evidence.push({ id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation, facts: [...item.facts] });
   }
   const sourceStates: ChatWorkspace["sourceStates"] = {};
   for (const [key, value] of Object.entries(workspace.sourceStates)) {

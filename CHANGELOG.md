@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Made current modelled air quality understandable at a glance with the US AQI
+  category, PM2.5, PM10, model time, map-center scope, and an explicit
+  “not a sensor” label.
+- Renamed the shared time control to “Event history” so it no longer implies
+  that a current air-quality estimate represents 7 or 30 days.
+- Supplied complete pollutant facts to the assistant and prevented it from
+  describing current air quality as historical coverage.
+
 ## 1.0.0-rc.2 — 2026-08-30
 
 - Replaced illustrative prototype data with live USGS, NASA EONET, and

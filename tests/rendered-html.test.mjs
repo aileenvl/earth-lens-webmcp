@@ -69,6 +69,7 @@ test("time-window controls are real labelled controls rather than a decorative s
   assert.match(page, /stepTimeWindow\("previous"\)/);
   assert.match(page, /stepTimeWindow\("next"\)/);
   assert.match(page, /Choose evidence time window/);
+  assert.match(page, /Choose event history window/);
   assert.doesNotMatch(page, /<div><span style=\{\{ width:/);
 });
 
@@ -81,4 +82,16 @@ test("renders a real natural-language assistant form instead of a hard-coded pro
   assert.match(chat, /fetch\("\/api\/chat"/);
   assert.match(chat, /Ask Earth Lens/);
   assert.doesNotMatch(page, /Show environmental activity that may affect this area today/);
+});
+
+test("air quality explains its current model scope and pollutant detail", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const card = await readFile(new URL("../app/components/AirQualityCard.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /<AirQualityCard/);
+  assert.match(page, /Event history/);
+  assert.match(card, /Current model estimate/);
+  assert.match(card, /Not a sensor/);
+  assert.match(card, /PM₂\.₅/);
+  assert.match(card, /PM₁₀/);
 });
