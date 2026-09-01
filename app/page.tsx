@@ -288,6 +288,13 @@ export default function Home() {
             })}
           </div>
 
+          <div className="earthquakeResults airQualityResult" aria-live="polite">
+            <div className="sectionHead"><span>CURRENT AIR QUALITY</span><span>OPEN-METEO · CAMS</span></div>
+            {airQualityState.status === "loading" && <p>Loading modelled conditions…</p>}
+            {airQualityState.status === "unavailable" && <p role="alert">Air quality unavailable: {airQualityState.reason}</p>}
+            {airQuality && <AirQualityCard evidence={airQuality} selected={selectedObservation === airQuality.id} onInspect={() => { setSelectedObservation(airQuality.id); setPanel("uncertainty"); }} />}
+          </div>
+
           <div className="earthquakeResults naturalEventResults" aria-live="polite">
             <div className="sectionHead"><span>NASA EONET IN AREA</span><span>{areaNaturalEvents.length}</span></div>
             {naturalEventState.status === "loading" && <p>Loading NASA EONET events…</p>}
@@ -298,13 +305,6 @@ export default function Home() {
                 <strong>{record.title}</strong><span>{String(record.attributes.category)} · {new Date(record.observedAt).toLocaleDateString()}</span>
               </button>
             ))}
-          </div>
-
-          <div className="earthquakeResults airQualityResult" aria-live="polite">
-            <div className="sectionHead"><span>CURRENT AIR QUALITY</span><span>OPEN-METEO · CAMS</span></div>
-            {airQualityState.status === "loading" && <p>Loading modelled conditions…</p>}
-            {airQualityState.status === "unavailable" && <p role="alert">Air quality unavailable: {airQualityState.reason}</p>}
-            {airQuality && <AirQualityCard evidence={airQuality} selected={selectedObservation === airQuality.id} onInspect={() => { setSelectedObservation(airQuality.id); setPanel("uncertainty"); }} />}
           </div>
 
           <div className="earthquakeResults" aria-live="polite">
