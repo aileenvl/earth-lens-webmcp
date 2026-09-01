@@ -30,6 +30,8 @@ test("chat server keeps the key in authorization, disables storage, and validate
   assert.match(body.instructions, /Only propose actions the person explicitly requests/);
   assert.match(body.instructions, /create a draft only when the person asks/);
   assert.match(body.instructions, /event time window does not apply to current air-quality evidence/);
+  assert.match(body.instructions, /always include inspect_observation for the most relevant matching record/);
+  assert.match(body.instructions, /set_layer_visibility first when that evidence layer is hidden/);
 });
 
 test("chat server does not expose upstream error details", async () => {

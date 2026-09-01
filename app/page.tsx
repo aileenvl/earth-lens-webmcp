@@ -6,7 +6,7 @@ import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx"
 import { AirQualityCard } from "./components/AirQualityCard.tsx";
 import { AssistantChat } from "./components/AssistantChat.tsx";
 import type { AssistantAction, ChatWorkspace } from "./chat/contract.ts";
-import { describeUsAqi } from "./domain/air-quality.ts";
+import { describeUsAqi, getUsAqiTone } from "./domain/air-quality.ts";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
 import { analyzeCoverage } from "./domain/review/coverage.ts";
 import { createSituationLensDraft } from "./domain/review/lens.ts";
@@ -220,7 +220,7 @@ export default function Home() {
       set_time_window: `Changed the time range to ${action.window ?? "the requested window"}`,
       set_geographic_area: `Updated the investigation area${action.label ? ` to ${action.label}` : ""}`,
       query_selected_area: "Queried the selected area",
-      inspect_observation: "Opened the requested evidence record",
+      inspect_observation: "Opened the evidence record and its source details",
       analyze_evidence_coverage: "Opened evidence coverage and limitations",
       create_situation_lens_draft: "Created a situation lens draft for review",
       undo_last_agent_change: "Undid the latest safe agent change",
@@ -229,6 +229,8 @@ export default function Home() {
   }, []);
 
   const selected = [...earthquakes, ...naturalEvents, ...(airQuality ? [airQuality] : [])].find((item) => item.id === selectedObservation);
+  const selectedAqi = selected?.evidenceType === "air-quality" ? Number(selected.attributes.usAqi) : null;
+  const selectedAqiDescription = selectedAqi === null ? null : describeUsAqi(selectedAqi);
   const airQualityDescription = airQuality ? describeUsAqi(Number(airQuality.attributes.usAqi)) : null;
 
   return (
@@ -357,7 +359,7 @@ export default function Home() {
               <p className="eyebrow">EVIDENCE, NOT A VERDICT</p>
               <strong>{selected ? selected.title : "Evidence needs context"}</strong>
               <p>{selected ? selected.limitation : "Select a live USGS event from the map or evidence list to inspect its provenance and limitations."}</p>
-              {selected?.evidenceType === "air-quality" && <dl className="selectedAirFacts"><div><dt>PM₂.₅</dt><dd>{String(selected.attributes.pm2_5)} {String(selected.attributes.pm2_5Unit)}</dd></div><div><dt>PM₁₀</dt><dd>{String(selected.attributes.pm10)} {String(selected.attributes.pm10Unit)}</dd></div><div><dt>Coverage</dt><dd>Current model estimate at map center</dd></div></dl>}
+              {selected?.evidenceType === "air-quality" && selectedAqi !== null && selectedAqiDescription && <><div className={`selectedAqiSummary aqi-${getUsAqiTone(selectedAqi)}`} aria-label={`US AQI ${selectedAqi}, ${selectedAqiDescription.label}`}><strong>{selectedAqi}</strong><span><b>{selectedAqiDescription.label}</b><small>US AQI</small></span></div><dl className="selectedAirFacts"><div><dt>PM₂.₅</dt><dd>{String(selected.attributes.pm2_5)} {String(selected.attributes.pm2_5Unit)}</dd></div><div><dt>PM₁₀</dt><dd>{String(selected.attributes.pm10)} {String(selected.attributes.pm10Unit)}</dd></div><div><dt>Coverage</dt><dd>Current model estimate at map center</dd></div></dl></>}
               <div className="sourceStrip"><span>{selected ? selected.provider === "usgs" ? "USGS" : selected.provider === "eonet" ? "NASA EONET + origin" : "Open-Meteo + CAMS" : "Public sources"}</span><span>{selected ? new Date(selected.observedAt).toLocaleString() : "live when available"}</span></div>
               {selected && <a className="sourceLink" href={selected.sourceUrl} target="_blank" rel="noreferrer">Open originating source record ↗</a>}
               <button className="textAction" onClick={() => { setPanel("activity"); log("You asked the agent to inspect uncertainty.", "human"); }}>Ask the agent to investigate →</button>

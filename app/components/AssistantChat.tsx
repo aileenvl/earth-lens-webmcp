@@ -53,10 +53,10 @@ export function AssistantChat({ workspace, onAction }: AssistantChatProps) {
     <section className="assistantChat" aria-labelledby="assistant-title">
       <div className="assistantHeading">
         <span className="agentIcon" aria-hidden="true">✦</span>
-        <div><strong id="assistant-title">Ask Earth Lens</strong><span>Natural language · actions stay visible</span></div>
+        <div><strong id="assistant-title">Ask Earth Lens</strong><span>Researches with site tools · actions stay visible</span></div>
       </div>
       <div className="chatMessages" aria-live="polite">
-        {messages.length === 0 && <p className="chatWelcome">Ask what is happening in the selected area, compare sources, or say “show me the last 7 days.”</p>}
+        {messages.length === 0 && <p className="chatWelcome">Ask about air quality, earthquakes, or natural events. Earth Lens will open the evidence it used on the map.</p>}
         {messages.map((message) => (
           <div className={`chatMessage ${message.role}`} key={message.id}>
             <b>{message.role === "user" ? "You" : "Earth Lens"}</b>

@@ -89,6 +89,9 @@ test("air quality explains its current model scope and pollutant detail", async 
   const card = await readFile(new URL("../app/components/AirQualityCard.tsx", import.meta.url), "utf8");
 
   assert.match(page, /<AirQualityCard/);
+  assert.match(page, /selectedAqiSummary/);
+  assert.match(card, /getUsAqiTone/);
+  assert.match(card, /aqi-\$\{tone\}/);
   assert.match(page, /Event history/);
   assert.match(card, /Current model estimate/);
   assert.match(card, /Not a sensor/);
