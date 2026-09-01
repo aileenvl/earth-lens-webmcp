@@ -77,14 +77,15 @@ contract, safety constraints, quality targets, and atomic tasks.
 
 1. `get_workspace_state`
 2. `list_authoritative_sources`
-3. `add_environmental_layer`
-4. `remove_environmental_layer`
-5. `set_time_window`
-6. `set_geographic_area`
-7. `query_selected_area`
-8. `inspect_observation`
-9. `analyze_evidence_coverage`
-10. `create_situation_lens`
+3. `set_layer_visibility`
+4. `set_time_window`
+5. `set_geographic_area`
+6. `query_selected_area`
+7. `inspect_observation`
+8. `analyze_evidence_coverage`
+9. `create_situation_lens_draft`
+10. `undo_last_agent_change`
+11. `focus_place`
 
 Inputs use latitude, longitude, radius, IDs, and time—not pixels. Mutations must
 visibly change the map and remain reversible. Results must include source,

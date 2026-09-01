@@ -2,6 +2,7 @@ import type { Actor, EvidenceRecord, InvestigationArea, TimeWindow } from "../ty
 import type { CoverageEntry } from "./coverage.ts";
 
 export interface SituationLensDraft { title: string; summary: string; area: InvestigationArea; timeWindow: TimeWindow; gaps: CoverageEntry[]; citations: string[]; createdAt: string; createdBy: Actor; revision: number; status: "draft" }
+export interface SituationLensReview { reviewedAt: string; reviewedBy: "human"; draftRevision: number }
 interface DraftInput { title: string; area: InvestigationArea; timeWindow: TimeWindow; evidence: readonly EvidenceRecord[]; coverage: CoverageEntry[]; createdAt: string; revision: number }
 export function createSituationLensDraft(input: DraftInput): SituationLensDraft {
   const citations = [...new Set(input.evidence.map((record) => record.sourceUrl))];
@@ -11,4 +12,8 @@ export function createSituationLensDraft(input: DraftInput): SituationLensDraft 
 export function reviseSituationLensDraft(draft: SituationLensDraft, summary: string, at: string): SituationLensDraft {
   if (!summary.trim() || !Number.isFinite(Date.parse(at))) throw new Error("A revision needs non-empty content and a valid timestamp.");
   return { ...structuredClone(draft), summary: summary.trim(), createdAt: at, createdBy: "human", revision: draft.revision + 1, status: "draft" };
+}
+export function reviewSituationLensDraft(draft: SituationLensDraft, reviewedAt: string): SituationLensReview {
+  if (!Number.isFinite(Date.parse(reviewedAt))) throw new Error("A review needs a valid timestamp.");
+  return { reviewedAt, reviewedBy: "human", draftRevision: draft.revision };
 }

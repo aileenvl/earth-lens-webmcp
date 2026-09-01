@@ -24,12 +24,12 @@ produce a reviewable draft; there is no send or publish operation.
 Signed-in visitors can ask questions directly in the app. A bounded evidence
 snapshot and short conversation history go to the OpenAI Responses API with
 storage disabled. The API key remains server-side. Both request and model output
-are validated, actions are restricted to the ten Earth Lens operations, and a
+are validated, actions are restricted to the eleven Earth Lens operations, and a
 question does not trigger a mutation unless the person explicitly asks for one.
 
 ## WebMCP implementation
 
-`app/webmcp/tools.ts` defines the ten public tools, strict JSON schemas, runtime
+`app/webmcp/tools.ts` defines the eleven public tools, strict JSON schemas, runtime
 validation, and one result envelope. `app/webmcp/register.ts` feature-detects
 `document.modelContext`, registers each tool exactly once, and aborts execution
 on cleanup. `app/page.tsx` binds those tools to current React and domain state.

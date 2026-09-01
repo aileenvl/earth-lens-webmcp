@@ -45,7 +45,7 @@ are deliberately distinct.
 
 ## WebMCP tools
 
-Earth Lens registers these tools with `document.modelContext.registerTool()`
+Earth Lens registers these 11 tools with `document.modelContext.registerTool()`
 when the browser exposes the experimental WebMCP API:
 
 | Tool | What it lets the agent do |
@@ -60,6 +60,7 @@ when the browser exposes the experimental WebMCP API:
 | `analyze_evidence_coverage` | Explain ready, empty, unavailable, stale, and modelled coverage |
 | `create_situation_lens_draft` | Compose a provenance-rich draft for human review only |
 | `undo_last_agent_change` | Undo the latest safe agent mutation without overwriting a newer human correction |
+| `focus_place` | Resolve a worldwide place name with ArcGIS, move the shared map, and refresh evidence |
 
 All schemas reject additional properties. Execution revalidates inputs and
 returns a consistent success/error envelope. Browsers without WebMCP retain the

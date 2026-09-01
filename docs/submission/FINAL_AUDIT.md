@@ -6,7 +6,7 @@
 - [x] Site access set to public for judges.
 - [x] Live USGS, NASA EONET, and Open-Meteo/CAMS data verified.
 - [x] ArcGIS map and accessible textual controls verified.
-- [x] Ten WebMCP tools implemented with strict schemas and structured results.
+- [x] Eleven WebMCP tools implemented with strict schemas and structured results.
 - [x] MIT license, setup, architecture, attribution, limitations, and tests documented.
 - [x] Full release checks, production accessibility, performance, and console checks passed.
 - [x] Submission copy and under-three-minute demo script prepared.

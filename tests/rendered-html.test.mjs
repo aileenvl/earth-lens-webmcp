@@ -35,19 +35,33 @@ test("server-renders the Earth Lens investigation shell", async () => {
   assert.match(html, /Waiting for WebMCP browser/);
   assert.match(html, /Every observation keeps its source, freshness, and limits\./);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
+  assert.doesNotMatch(html, /42 min ago|18 min ago|2 hr ago/);
+  assert.doesNotMatch(html, /Workspace inspected: 3 sources/);
 });
 
 test("keeps the WebMCP integration in the application source", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const registration = await readFile(new URL("../app/webmcp/register.ts", import.meta.url), "utf8");
-  const tools = await readFile(new URL("../app/webmcp/tools.ts", import.meta.url), "utf8");
+  const toolSource = await readFile(new URL("../app/webmcp/tools.ts", import.meta.url), "utf8");
+  const tools = [...toolSource.matchAll(/name:\s*"([^"]+)"/g)].map((match) => match[1]).join(" ");
 
   assert.match(page, /document\.modelContext/);
   assert.match(registration, /registerTool\(tool/);
   assert.match(tools, /get_workspace_state/);
   assert.match(tools, /query_selected_area/);
   assert.match(tools, /create_situation_lens_draft/);
+  assert.match(tools, /focus_place/);
+  assert.doesNotMatch(tools, /mark.*reviewed|publish|send/i);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
+});
+
+test("draft review is a visible human-only state transition", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const lens = await readFile(new URL("../app/domain/review/lens.ts", import.meta.url), "utf8");
+
+  assert.match(page, /reviewSituationLensDraft/);
+  assert.match(page, /Reviewed by you/);
+  assert.match(lens, /reviewedBy: "human"/);
 });
 
 test("keeps ArcGIS browser-only and provides non-map area controls", async () => {

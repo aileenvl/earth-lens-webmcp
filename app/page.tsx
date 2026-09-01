@@ -9,7 +9,7 @@ import type { AssistantAction, ChatWorkspace } from "./chat/contract.ts";
 import { describeUsAqi, getUsAqiTone } from "./domain/air-quality.ts";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
 import { analyzeCoverage } from "./domain/review/coverage.ts";
-import { createSituationLensDraft } from "./domain/review/lens.ts";
+import { createSituationLensDraft, reviewSituationLensDraft, type SituationLensDraft, type SituationLensReview } from "./domain/review/lens.ts";
 import { stepTimeWindow as getSteppedTimeWindow } from "./domain/time-window.ts";
 import type { EvidenceRecord, InvestigationArea, SourceState, TimeWindow } from "./domain/types.ts";
 import { fetchAirQuality } from "./sources/air-quality.ts";
@@ -30,31 +30,34 @@ declare global {
   }
 }
 
-const layerInfo: Record<LayerId, { label: string; source: string; color: string; freshness: string; limitation: string }> = {
+const layerInfo: Record<LayerId, { label: string; source: string; color: string; limitation: string }> = {
   earthquakes: {
     label: "Earthquakes",
     source: "USGS",
     color: "amber",
-    freshness: "42 min ago",
     limitation: "Magnitude and location may be revised after review.",
   },
   "air-quality": {
     label: "Air quality",
     source: "Open-Meteo + CAMS",
     color: "mint",
-    freshness: "18 min ago",
     limitation: "Modelled CAMS forecasts are spatial estimates, not local sensor measurements.",
   },
   "natural-events": {
     label: "Natural events",
     source: "NASA EONET",
     color: "coral",
-    freshness: "2 hr ago",
     limitation: "EONET spatial and temporal extents may be approximate and are not official alerts.",
   },
 };
 
 const stamp = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const sourceStateLabel = (state: SourceState) => state.status === "ready"
+  ? `Updated ${new Date(state.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+  : state.status === "loading" ? "Loading"
+    : state.status === "unavailable" ? "Unavailable"
+      : state.status === "empty" ? "No records reported"
+        : "Not requested";
 
 export default function Home() {
   const [activeLayers, setActiveLayers] = useState<LayerId[]>(["earthquakes", "air-quality", "natural-events"]);
@@ -74,9 +77,9 @@ export default function Home() {
   const [airQuality, setAirQuality] = useState<EvidenceRecord | null>(null);
   const [airQualityState, setAirQualityState] = useState<SourceState>({ status: "loading", requestedAt: new Date().toISOString() });
   const [panel, setPanel] = useState<"uncertainty" | "activity" | "about" | "lens" | null>("uncertainty");
-  const [activity, setActivity] = useState<Activity[]>([
-    { id: 1, kind: "agent", text: "Workspace inspected: 3 sources and 1 human selection are available.", time: stamp() },
-  ]);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [lensDraft, setLensDraft] = useState<SituationLensDraft | null>(null);
+  const [lensReview, setLensReview] = useState<SituationLensReview | null>(null);
   const [toolsReady, setToolsReady] = useState(false);
   const revisionRef = useRef(0);
   const agentUndoRef = useRef<Array<{ activeLayers: LayerId[]; timeWindow: TimeWindow; selection: InvestigationArea; revision: number }>>([]);
@@ -187,13 +190,13 @@ export default function Home() {
     const sourceStates = () => ({ usgs: stateRef.current.earthquakeState, eonet: stateRef.current.naturalEventState, "open-meteo": stateRef.current.airQualityState });
     const tools = createEarthLensTools({
       getState: () => ({ activeLayers: stateRef.current.activeLayers, timeWindow: stateRef.current.timeWindow, selection: stateRef.current.selection, evidence: scopedEvidence(), areaEvidence: scopedEvidence(), sourceStates: sourceStates(), revision: revisionRef.current }),
-      listSources: () => Object.entries(layerInfo).map(([id, source]) => ({ id, ...source })),
+      listSources: () => Object.entries(layerInfo).map(([id, source]) => ({ id, ...source, sourceState: sourceStates()[id === "earthquakes" ? "usgs" : id === "natural-events" ? "eonet" : "open-meteo"] })),
       setLayerVisibility: (layerId, visible) => { rememberAgentChange(); setActiveLayers((current) => visible ? [...new Set([...current, layerId])] : current.filter((item) => item !== layerId)); log(`Agent ${visible ? "showed" : "hid"} the ${layerInfo[layerId].label.toLowerCase()} layer.`); return { layerId, visible, revision: revisionRef.current, reversible: true }; },
       setTimeWindow: (window) => { rememberAgentChange(); changeTimeWindow(window); log(`Agent changed the evidence window to ${window}.`); return { window, revision: revisionRef.current, reversible: true }; },
       setArea: (area) => { rememberAgentChange(); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(area); log(`Agent focused the map on “${area.label}”.`); return { area, revision: revisionRef.current, reversible: true }; },
       inspectEvidence: (id) => { const item = allEvidence().find((record) => record.id === id) ?? null; if (item) { setSelectedObservation(item.id); setPanel("uncertainty"); log(`Agent inspected ${item.title} and surfaced its limitation.`); } return item; },
       analyzeCoverage: () => { setPanel("uncertainty"); log("Agent surfaced evidence gaps and modelled coverage."); return { revision: revisionRef.current, coverage: analyzeCoverage(sourceStates(), scopedEvidence()), limitations: stateRef.current.activeLayers.map((id) => ({ layer: id, limitation: layerInfo[id].limitation })), warning: "No displayed observation is an official emergency alert." }; },
-      createLensDraft: (title) => { setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); },
+      createLensDraft: (title) => { const draft = createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); setLensDraft(draft); setLensReview(null); setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return draft; },
       undoLastAgentChange: () => { const snapshot = agentUndoRef.current.pop(); if (!snapshot) return { undone: false, reason: "No reversible agent change is available." }; setActiveLayers(snapshot.activeLayers); changeTimeWindow(snapshot.timeWindow); setSelection(snapshot.selection); revisionRef.current += 1; log("Agent undid its last workspace change."); return { undone: true, revision: revisionRef.current, restoredFromRevision: snapshot.revision }; },
       focusPlace: async (query, radiusKm) => {
         const resolution = await resolvePlace(query);
@@ -310,6 +313,7 @@ export default function Home() {
           <div className="signalList">
             {(Object.keys(layerInfo) as LayerId[]).map((id) => {
               const info = layerInfo[id];
+              const sourceState = id === "earthquakes" ? earthquakeState : id === "natural-events" ? naturalEventState : airQualityState;
               const earthquakeSummary = earthquakeState.status === "ready"
                 ? `${areaEarthquakes.length} in selected area`
                 : earthquakeState.status === "loading" ? "Loading live feed…" : earthquakeState.status === "unavailable" ? "Source unavailable" : "No events reported";
@@ -323,7 +327,7 @@ export default function Home() {
               return (
                 <button className={`signal ${on ? "active" : ""}`} key={id} onClick={() => toggleLayer(id)}>
                   <span className={`signalDot ${info.color}`} />
-                  <span><small>{info.label}</small><strong>{id === "earthquakes" ? earthquakeSummary : id === "natural-events" ? naturalEventSummary : airQualitySummary}</strong><em>{info.source} · {id === "earthquakes" && earthquakeState.status === "ready" ? new Date(earthquakeState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : id === "natural-events" && naturalEventState.status === "ready" ? new Date(naturalEventState.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : id === "air-quality" && airQualityState.status === "ready" ? "CAMS forecast" : info.freshness}</em></span>
+                  <span><small>{info.label}</small><strong>{id === "earthquakes" ? earthquakeSummary : id === "natural-events" ? naturalEventSummary : airQualitySummary}</strong><em>{info.source} · {sourceStateLabel(sourceState)}</em></span>
                   <b>{on ? "✓" : "+"}</b>
                 </button>
               );
@@ -405,9 +409,9 @@ export default function Home() {
               <button className="textAction" onClick={() => { setPanel("activity"); log("You asked the agent to inspect uncertainty.", "human"); }}>Ask the agent to investigate →</button>
             </div>
           )}
-          {panel === "activity" && <SidePanel title="Collaboration trail" eyebrow="HUMAN + AGENT" onClose={() => setPanel(null)}><div className="activityList">{activity.map((item) => <div className={`activity ${item.kind}`} key={item.id}><span>{item.kind === "agent" ? "✦" : "You"}</span><p>{item.text}</p><time>{item.time}</time></div>)}</div></SidePanel>}
+          {panel === "activity" && <SidePanel title="Collaboration trail" eyebrow="HUMAN + AGENT" onClose={() => setPanel(null)}>{activity.length === 0 ? <p className="fineprint">No collaboration actions yet. Human and agent changes will appear here when they happen.</p> : <div className="activityList">{activity.map((item) => <div className={`activity ${item.kind}`} key={item.id}><span>{item.kind === "agent" ? "✦" : "You"}</span><p>{item.text}</p><time>{item.time}</time></div>)}</div>}</SidePanel>}
           {panel === "about" && <SidePanel title="A map you can question" eyebrow="ABOUT EARTH LENS" onClose={() => setPanel(null)}><p>Earth Lens is a shared spatial evidence workspace. Your agent operates semantic WebMCP tools—not map buttons—while every action remains visible and reversible.</p><p className="fineprint">All three signals use live public data from USGS, NASA EONET, and Open-Meteo/CAMS. Earth Lens is not an official emergency alert.</p></SidePanel>}
-          {panel === "lens" && <SidePanel title="Situation lens ready for review" eyebrow="DRAFT · NOT PUBLISHED" onClose={() => setPanel(null)}><div className="lensSummary"><b>{selection.label}</b><span>Last {timeWindow}</span><span>{activeLayers.length} active sources</span><span>{areaEarthquakes.length + areaNaturalEvents.length + (airQuality ? 1 : 0)} evidence records in scope</span></div><p className="fineprint">The agent prepared this state. Only you can decide whether to share or publish it.</p><button className="primaryButton" onClick={() => log("You reviewed the draft situation lens.", "human")}>Mark as reviewed</button></SidePanel>}
+          {panel === "lens" && lensDraft && <SidePanel title="Situation lens ready for review" eyebrow="DRAFT · NOT PUBLISHED" onClose={() => setPanel(null)}><div className="lensSummary"><b>{lensDraft.area.label}</b><span>Last {lensDraft.timeWindow}</span><span>{lensDraft.citations.length} cited sources</span><span>{lensDraft.summary}</span></div><p className="fineprint">Review acknowledges this draft revision; it does not publish, send, or change its draft status.</p>{lensReview ? <p role="status"><strong>Reviewed by you</strong><br /><span className="fineprint">{new Date(lensReview.reviewedAt).toLocaleString()} · draft revision {lensReview.draftRevision}</span></p> : <button className="primaryButton" onClick={() => { const review = reviewSituationLensDraft(lensDraft, new Date().toISOString()); setLensReview(review); log(`You reviewed draft revision ${review.draftRevision}.`, "human"); }}>Mark as reviewed</button>}</SidePanel>}
         </div>
       </section>
     </main>

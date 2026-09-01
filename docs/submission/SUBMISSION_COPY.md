@@ -14,7 +14,7 @@ draft for human review.
 ## Why this is a strong fit for WebMCP
 
 Maps are high-information interfaces but poor targets for agents that must infer
-meaning from pixels and UI controls. Earth Lens exposes ten semantic tools over
+meaning from pixels and UI controls. Earth Lens exposes eleven semantic tools over
 the same typed, revisioned state used by its human interface. The agent can read
 the exact selected area, query only intersecting evidence, inspect provenance,
 change map scope visibly, and undo safe changes. This is not a chat box attached
@@ -43,7 +43,7 @@ guess a complex visual interface.
 
 ## How WebMCP was implemented
 
-Earth Lens feature-detects `document.modelContext` and registers ten tools with
+Earth Lens feature-detects `document.modelContext` and registers eleven tools with
 strict JSON schemas. All tools call the same framework-independent domain
 operations as the React/ArcGIS UI. Inputs are validated at execution, results
 use one structured envelope, provider requests are independently cancellable,
@@ -53,7 +53,7 @@ experience.
 
 ## Judging criteria
 
-**WebMCP leverage:** Ten non-trivial read, mutation, analysis, drafting, and undo
+**WebMCP leverage:** Eleven non-trivial read, mutation, analysis, drafting, and undo
 tools operate real application state. The demo proves discovery and invocation.
 
 **Execution:** A coherent public app combines a production map, three live data
