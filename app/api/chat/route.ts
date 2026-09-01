@@ -1,12 +1,9 @@
-import { chatGPTSignInPath, getChatGPTUser } from "../../chatgpt-auth.ts";
 import { parseChatRequest } from "../../chat/contract.ts";
 import { requestAssistantPlan } from "../../chat/server.ts";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return json({ error: { code: "AUTH_REQUIRED", message: "Sign in with ChatGPT to ask Earth Lens.", signInPath: chatGPTSignInPath("/") } }, 401);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return json({ error: { code: "ASSISTANT_NOT_CONFIGURED", message: "The Earth Lens assistant is not configured yet." } }, 503);
   let body: unknown;
