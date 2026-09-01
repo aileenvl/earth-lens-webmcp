@@ -29,9 +29,13 @@ be stale between discovery and invocation.
 8. `analyze_evidence_coverage`
 9. `create_situation_lens_draft`
 10. `undo_last_agent_change`
+11. `focus_place` — resolve a worldwide place name, visibly move the shared map, and refresh evidence
 
 Coordinates are WGS84; radius is kilometres; IDs are opaque strings. Mutating
 tools report the applied change, current revision, and whether it is reversible.
+`focus_place` accepts a bounded text query and optional radius. It uses ArcGIS
+World Geocoding, rejects low-confidence or ambiguous results, and never asks the
+language model to invent coordinates.
 
 Official source: https://github.com/webmachinelearning/webmcp/blob/main/index.bs
 

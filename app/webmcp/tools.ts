@@ -40,5 +40,14 @@ export function createEarthLensTools(actions: WebMcpActions): ModelContextTool[]
     { name: "analyze_evidence_coverage", description: "Explain ready, empty, unavailable, stale, and modelled source coverage without inventing a risk score.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, execute: async () => success(actions.analyzeCoverage()) },
     { name: "create_situation_lens_draft", description: "Create a provenance-rich situation lens draft for human review; this never publishes or sends anything.", inputSchema: { type: "object", properties: { title: { type: "string" } }, additionalProperties: false }, execute: async ({ title }) => success(actions.createLensDraft(typeof title === "string" && title.trim() ? title.trim() : "Environmental situation lens")) },
     { name: "undo_last_agent_change", description: "Undo the most recent reversible agent change only when no newer human correction would be overwritten.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, execute: async () => success(actions.undoLastAgentChange()) },
+    {
+      name: "focus_place", description: "Resolve a worldwide place name with ArcGIS, visibly move the shared investigation area, and refresh environmental evidence.",
+      inputSchema: { type: "object", properties: { query: { type: "string", minLength: 2, maxLength: 160 }, radiusKm: { type: "number", exclusiveMinimum: 0, maximum: 2000 } }, required: ["query"], additionalProperties: false },
+      execute: async ({ query, radiusKm }) => {
+        if (typeof query !== "string" || query.trim().length < 2 || query.length > 160 || (radiusKm !== undefined && (typeof radiusKm !== "number" || !Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 2000))) return failure("INVALID_INPUT", "query must contain 2 to 160 characters and radiusKm must be between 0 and 2000.");
+        const result = await actions.focusPlace(query.trim(), typeof radiusKm === "number" ? radiusKm : 100);
+        return result.ok ? success(result.data) : failure(result.code, result.message, result.details);
+      },
+    },
   ];
 }

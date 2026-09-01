@@ -11,7 +11,7 @@ export type ChatWorkspace = {
 };
 export type ChatRequest = { message: string; history: ChatHistoryItem[]; workspace: ChatWorkspace };
 
-const actionNames = ["get_workspace_state", "list_authoritative_sources", "set_layer_visibility", "set_time_window", "set_geographic_area", "query_selected_area", "inspect_observation", "analyze_evidence_coverage", "create_situation_lens_draft", "undo_last_agent_change"] as const;
+const actionNames = ["get_workspace_state", "list_authoritative_sources", "set_layer_visibility", "set_time_window", "set_geographic_area", "query_selected_area", "inspect_observation", "analyze_evidence_coverage", "create_situation_lens_draft", "undo_last_agent_change", "focus_place"] as const;
 export type ChatActionName = (typeof actionNames)[number];
 export type AssistantAction = {
   name: ChatActionName;
@@ -24,6 +24,7 @@ export type AssistantAction = {
   label: string | null;
   observationId: string | null;
   title: string | null;
+  query: string | null;
 };
 export type AssistantPlan = { answer: string; actions: AssistantAction[] };
 type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -70,6 +71,7 @@ export function parseAssistantPlan(input: unknown): ParseResult<AssistantPlan> {
     if (action.visible !== null && typeof action.visible !== "boolean") return { ok: false, error: "Invalid visibility action." };
     for (const field of ["latitude", "longitude", "radiusKm"] as const) if (action[field] !== null && !finite(action[field])) return { ok: false, error: "Invalid geographic action." };
     for (const field of ["label", "observationId", "title"] as const) if (action[field] !== null && typeof action[field] !== "string") return { ok: false, error: "Invalid action text." };
+    if (action.query !== null && (typeof action.query !== "string" || action.query.trim().length < 2 || action.query.length > 160)) return { ok: false, error: "Invalid place query." };
     actions.push(action as AssistantAction);
   }
   return { ok: true, value: { answer: input.answer.trim(), actions } };
@@ -81,8 +83,8 @@ export const assistantPlanSchema = {
   required: ["answer", "actions"],
   properties: {
     answer: { type: "string" },
-    actions: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["name", "window", "layerId", "visible", "latitude", "longitude", "radiusKm", "label", "observationId", "title"], properties: {
-      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] },
+    actions: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["name", "window", "layerId", "visible", "latitude", "longitude", "radiusKm", "label", "observationId", "title", "query"], properties: {
+      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] }, query: { type: ["string", "null"] },
     } } },
   },
 } as const;

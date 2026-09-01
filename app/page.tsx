@@ -14,6 +14,7 @@ import { stepTimeWindow as getSteppedTimeWindow } from "./domain/time-window.ts"
 import type { EvidenceRecord, InvestigationArea, SourceState, TimeWindow } from "./domain/types.ts";
 import { fetchAirQuality } from "./sources/air-quality.ts";
 import { fetchEonetEvidence } from "./sources/eonet.ts";
+import { resolvePlace } from "./sources/geocoding.ts";
 import { fetchUsgsEvidence } from "./sources/usgs.ts";
 import { registerWebMcpTools } from "./webmcp/register.ts";
 import { createEarthLensTools } from "./webmcp/tools.ts";
@@ -62,7 +63,7 @@ export default function Home() {
     latitude: 25.6866,
     longitude: -100.3161,
     radiusKm: 100,
-    label: "Monterrey region",
+    label: "Monterrey",
     updatedBy: "human",
   });
   const [selectedObservation, setSelectedObservation] = useState<string | null>(null);
@@ -194,6 +195,19 @@ export default function Home() {
       analyzeCoverage: () => { setPanel("uncertainty"); log("Agent surfaced evidence gaps and modelled coverage."); return { revision: revisionRef.current, coverage: analyzeCoverage(sourceStates(), scopedEvidence()), limitations: stateRef.current.activeLayers.map((id) => ({ layer: id, limitation: layerInfo[id].limitation })), warning: "No displayed observation is an official emergency alert." }; },
       createLensDraft: (title) => { setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); },
       undoLastAgentChange: () => { const snapshot = agentUndoRef.current.pop(); if (!snapshot) return { undone: false, reason: "No reversible agent change is available." }; setActiveLayers(snapshot.activeLayers); changeTimeWindow(snapshot.timeWindow); setSelection(snapshot.selection); revisionRef.current += 1; log("Agent undid its last workspace change."); return { undone: true, revision: revisionRef.current, restoredFromRevision: snapshot.revision }; },
+      focusPlace: async (query, radiusKm) => {
+        const resolution = await resolvePlace(query);
+        if (resolution.status === "ambiguous") return { ok: false as const, code: "AMBIGUOUS_PLACE", message: "That place name has multiple strong matches. Add a country, state, or neighborhood.", details: { candidates: resolution.candidates } };
+        if (resolution.status !== "resolved") return { ok: false as const, code: resolution.status === "not-found" ? "PLACE_NOT_FOUND" : "PLACE_SEARCH_UNAVAILABLE", message: resolution.reason };
+        rememberAgentChange();
+        const area: InvestigationArea = { latitude: resolution.candidate.latitude, longitude: resolution.candidate.longitude, radiusKm, label: resolution.candidate.label, updatedBy: "agent" };
+        setSelectedObservation(null);
+        setPanel(null);
+        setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() });
+        setSelection(area);
+        log(`Agent resolved “${query}” with ArcGIS and focused the map on ${area.label}.`);
+        return { ok: true as const, data: { area, match: resolution.candidate, revision: revisionRef.current, reversible: true } };
+      },
     });
     earthLensToolsRef.current = tools;
     const registration = registerWebMcpTools(document.modelContext, tools);
@@ -207,6 +221,7 @@ export default function Home() {
     const input: Record<string, unknown> = action.name === "set_time_window" ? { window: action.window }
       : action.name === "set_layer_visibility" ? { layerId: action.layerId, visible: action.visible }
       : action.name === "set_geographic_area" ? { latitude: action.latitude, longitude: action.longitude, radiusKm: action.radiusKm, ...(action.label ? { label: action.label } : {}) }
+      : action.name === "focus_place" ? { query: action.query, ...(action.radiusKm ? { radiusKm: action.radiusKm } : {}) }
       : action.name === "inspect_observation" ? { observationId: action.observationId }
       : action.name === "create_situation_lens_draft" ? (action.title ? { title: action.title } : {})
       : {};
@@ -224,6 +239,7 @@ export default function Home() {
       analyze_evidence_coverage: "Opened evidence coverage and limitations",
       create_situation_lens_draft: "Created a situation lens draft for review",
       undo_last_agent_change: "Undid the latest safe agent change",
+      focus_place: `Focused the map on ${action.query ?? "the requested place"} and refreshed its evidence`,
     };
     return summaries[action.name];
   }, []);
@@ -237,14 +253,14 @@ export default function Home() {
     <main className="shell">
       <header className="topbar">
         <div className="brand"><span className="brandMark">E</span><span>Earth Lens</span></div>
-        <button className="status" onClick={() => setPanel("activity")}><span className={`pulse ${toolsReady ? "" : "waiting"}`} /> {toolsReady ? "Agent-ready · 10 tools exposed" : "Waiting for WebMCP browser"}</button>
+        <button className="status" title={toolsReady ? undefined : "Waiting for WebMCP browser compatibility"} onClick={() => setPanel("activity")}><span className={`pulse ${toolsReady ? "" : "waiting"}`} /> {toolsReady ? "Agent-ready · 11 tools exposed" : "WebMCP tools require a supported browser"}</button>
         <button className="quietButton" onClick={() => setPanel("about")}>About this map</button>
       </header>
 
       <section className="workspace">
         <aside className="rail">
           <p className="eyebrow">INVESTIGATION 01</p>
-          <h1>What’s happening around Monterrey?</h1>
+          <h1>What’s happening around {selection.label}?</h1>
           <p className="lede">A shared evidence workspace for you and your agent.</p>
 
           <AssistantChat

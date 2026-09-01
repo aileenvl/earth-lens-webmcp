@@ -27,13 +27,13 @@ test("chat requests reject empty, oversized, and structurally invalid input", ()
 test("assistant plans allow only validated Earth Lens actions", () => {
   const valid = parseAssistantPlan({
     answer: "I’ll show the last seven days.",
-    actions: [{ name: "set_time_window", window: "7d", layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null }],
+    actions: [{ name: "set_time_window", window: "7d", layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null, query: null }],
   });
   assert.equal(valid.ok, true);
 
   const invalid = parseAssistantPlan({
     answer: "Running arbitrary code.",
-    actions: [{ name: "run_javascript", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null }],
+    actions: [{ name: "run_javascript", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null, query: null }],
   });
   assert.equal(invalid.ok, false);
 });

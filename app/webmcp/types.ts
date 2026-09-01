@@ -27,4 +27,5 @@ export interface WebMcpActions {
   analyzeCoverage: () => unknown;
   createLensDraft: (title: string) => unknown;
   undoLastAgentChange: () => unknown;
+  focusPlace: (query: string, radiusKm: number) => Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string; details?: unknown }>;
 }

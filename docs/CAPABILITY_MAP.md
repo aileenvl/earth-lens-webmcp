@@ -11,6 +11,7 @@ Module IDs are stable once this proposal is accepted.
 | `workspace-core` | Typed shared investigation state, source metadata, selection geometry, activity history, and situation-lens draft state | — |
 | `arcgis-map` | ArcGIS 2D map, no-key basemap, pan/zoom, area selection, evidence rendering, popup inspection, and keyboard-accessible non-map controls | `workspace-core` |
 | `evidence-sources` | Fetch and normalize USGS earthquakes, NASA EONET events, and Open-Meteo/CAMS air quality with provenance, freshness, uncertainty, cancellation, and partial failure | `workspace-core` |
+| `place-resolution` | Resolve worldwide place names through ArcGIS World Geocoding into validated WGS84 investigation areas without silently choosing ambiguous matches | `workspace-core`, `arcgis-map` |
 | `webmcp-tools` | Register semantic WebMCP tools that read and mutate the same domain operations used by the visible UI | `workspace-core`, `arcgis-map`, `evidence-sources` |
 | `collaboration-review` | Activity log, reversible agent changes, evidence-coverage analysis, and human-confirmed situation-lens drafting | `webmcp-tools` |
 | `release-submission` | Automated checks, public deployment, reproducible repository, attributions, demo script/video, and Devpost submission audit | `arcgis-map`, `evidence-sources`, `collaboration-review` |
@@ -46,6 +47,7 @@ workspace-core
 - Agent changes are visible and reversible. A situation lens remains a draft until a person confirms it.
 - The release does not predict disasters, issue alerts, recommend evacuation, publish content, transmit personal information, or process contributions.
 - Authentication, persistent accounts, paid services, and additional environmental providers are post-submission work.
+- Worldwide place-name resolution is accepted for the release; ambiguous matches fail with visible choices rather than model-guessed coordinates.
 
 ## Review gate
 

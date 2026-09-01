@@ -329,6 +329,29 @@ architecture, and preserve rollback information.
 - [ ] Every provider failure simulation passes against the public candidate.
 - [ ] Exact demo succeeds twice.
 
+## T14 — Add worldwide agent place resolution
+
+**Description:** Resolve natural-language places through ArcGIS World Geocoding
+and expose a reversible `focus_place` WebMCP mutation that refreshes the shared
+investigation workspace.
+
+**Acceptance criteria:**
+
+- [ ] “CDMX” resolves to a validated Mexico City WGS84 center and moves the map.
+- [ ] Empty, malformed, unavailable, low-confidence, and ambiguous results fail visibly without changing the area.
+- [ ] A successful change refreshes environmental evidence and appears in the collaboration trail.
+- [ ] The embedded assistant uses `focus_place` instead of emitting incomplete coordinates.
+
+**Verification:**
+
+- [ ] Geocoding adapter fixtures and WebMCP contract tests pass.
+- [ ] Public browser demo moves from Monterrey to CDMX and loads a new CAMS estimate.
+
+**Dependencies:** T10, T12
+**Files likely touched:** `app/sources/geocoding.ts`, `app/webmcp/tools.ts`,
+`app/webmcp/types.ts`, `app/chat/contract.ts`, `app/page.tsx`, focused tests
+**Estimated scope:** Medium
+
 **Dependencies:** T12
 **Files likely touched:** `README.md`, `CHANGELOG.md`,
 `docs/submission/IMPLEMENTATION.md`, `.openai/hosting.json`

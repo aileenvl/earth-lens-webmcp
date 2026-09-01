@@ -28,7 +28,7 @@ test("server-renders the Earth Lens investigation shell", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
-  const html = await response.text();
+  const html = (await response.text()).replaceAll("<!-- -->", "");
   assert.match(html, /<title>Earth Lens — Investigate a place with your agent<\/title>/i);
   assert.match(html, /What’s happening around Monterrey\?/);
   assert.match(html, /A shared evidence workspace for you and your agent\./);
