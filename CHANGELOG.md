@@ -12,6 +12,16 @@
 - Supplied complete pollutant facts to the assistant and prevented it from
   describing current air quality as historical coverage.
 
+### Added
+
+- Added worldwide NASA LANCE/FIRMS VIIRS thermal-hotspot evidence through the
+  public ArcGIS Living Atlas FeatureServer.
+- Added confidence, satellite, fire-radiative-power, day/night, pixel-size,
+  observation-time, provenance, and false-positive context to the shared map,
+  text UI, embedded assistant, WebMCP workspace, coverage analysis, and drafts.
+- Kept the WebMCP contract at eleven tools by extending the existing semantic
+  layer, query, inspection, and undo operations.
+
 ## 1.0.0-rc.2 — 2026-08-30
 
 - Replaced illustrative prototype data with live USGS, NASA EONET, and

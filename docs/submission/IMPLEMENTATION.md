@@ -10,7 +10,8 @@ produce a reviewable draft; there is no send or publish operation.
 ## Data flow
 
 1. Area and time controls update the revisioned workspace.
-2. Independent adapters request USGS, NASA EONET, and Open-Meteo/CAMS data.
+2. Independent adapters request USGS, NASA EONET, Open-Meteo/CAMS, and NASA
+   LANCE/FIRMS VIIRS data through public HTTPS endpoints.
 3. Each adapter validates and normalizes provenance into a common evidence
    contract. Abort signals and revision checks discard stale responses.
 4. ArcGIS and the textual evidence surface render the same normalized records.
@@ -18,6 +19,14 @@ produce a reviewable draft; there is no send or publish operation.
 6. The embedded assistant maps natural language to the same allowlisted tool
    executors; structured output is validated again before any action runs.
 7. Coverage analysis and lens drafting use only the current selected area.
+
+The VIIRS adapter queries the public ArcGIS Living Atlas FeatureServer with the
+same validated point, radius, and event window that the person and agent share.
+It requests explicit fields, uses cacheable `hours_old` filters, caps results at
+200, and normalizes each detection into the same provenance-rich evidence
+contract. The 30-day workspace state discloses the source's seven-day limit.
+Every surface calls it a thermal hotspot rather than treating a satellite heat
+anomaly as a confirmed wildfire.
 
 ## Natural-language interaction
 
@@ -64,3 +73,14 @@ The Codex in-app browser used for the verification snapshot did not expose the
 experimental `document.modelContext` API. Contract behavior is automated; the
 submission video must additionally prove discovery and invocation in Chrome
 with WebMCP enabled.
+
+## VIIRS verification snapshot — 2026-09-03
+
+- 61 logic tests pass with 95.24% overall line coverage.
+- The VIIRS adapter has 96.14% line coverage and covers URL construction,
+  normalization, record caps, malformed data, empty data, HTTP failure, and
+  cancellation.
+- TypeScript and ESLint checks completed without reported diagnostics.
+- The WebMCP surface remains eleven tools; `thermal-hotspots` is an additive
+  layer accepted by the existing visibility, query, inspection, coverage,
+  undo, and drafting tools.
