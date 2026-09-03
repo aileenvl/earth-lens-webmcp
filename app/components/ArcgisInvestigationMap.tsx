@@ -134,15 +134,22 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
             for (const graphic of evidenceGraphics) view.graphics.remove(graphic);
             evidenceGraphics = records.map((record) => {
               const magnitude = Number(record.attributes.magnitude ?? 0);
+              const radiativePower = Number(record.attributes.frpMw ?? 0);
               const selected = record.id === selectedId;
-              const color = record.provider === "usgs" ? [243, 180, 95, 0.88] : record.provider === "eonet" ? [239, 118, 95, 0.88] : [115, 214, 177, 0.92];
+              const color = record.provider === "usgs" ? [243, 180, 95, 0.88]
+                : record.provider === "eonet" ? [239, 118, 95, 0.88]
+                  : record.provider === "nasa-firms" ? [211, 74, 47, 0.92]
+                    : [115, 214, 177, 0.92];
+              const markerSize = record.provider === "nasa-firms"
+                ? Math.max(8, Math.min(20, 8 + Math.log2(1 + Math.max(0, radiativePower)) * 2))
+                : Math.max(7, Math.min(22, 6 + magnitude * 2));
               return new Graphic({
                 geometry: { type: "point", longitude: record.coordinates.longitude, latitude: record.coordinates.latitude },
                 attributes: { evidenceId: record.id },
                 symbol: {
                   type: "simple-marker",
                   color: selected ? [185, 62, 45, 0.95] : color,
-                  size: Math.max(7, Math.min(22, 6 + magnitude * 2)),
+                  size: markerSize,
                   outline: { color: [255, 255, 255, 0.95], width: selected ? 3 : 1.5 },
                 },
               });

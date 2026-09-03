@@ -68,6 +68,17 @@ test("an air-quality follow-up always opens the refreshed evidence", async () =>
   assert.deepEqual(result.actions.map(({ name, observationId }) => ({ name, observationId })), [{ name: "inspect_observation", observationId: "cdmx-air" }]);
 });
 
+test("a thermal-hotspot follow-up opens the shared NASA FIRMS record", async () => {
+  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "One satellite heat detection is in the area.", actions: [] }) }] }] });
+  const result = await requestAssistantPlan({
+    message: "Are there any fires or thermal hotspots near me?",
+    history: [],
+    workspace: { activeLayers: ["thermal-hotspots"], timeWindow: "24h", selection: { latitude: 25.68, longitude: -100.31, radiusKm: 100, label: "Monterrey" }, sourceStates: {}, evidence: [{ id: "nasa-firms:1", title: "Nominal-confidence satellite thermal hotspot", provider: "nasa-firms", observedAt: "2026-09-03T08:11:00Z", limitation: "Not a confirmed wildfire.", facts: ["Confidence nominal", "FRP 0.96 MW"] }] },
+  }, { apiKey: "test-key", fetcher });
+
+  assert.deepEqual(result.actions.map(({ name, observationId }) => ({ name, observationId })), [{ name: "inspect_observation", observationId: "nasa-firms:1" }]);
+});
+
 test("a named city question cannot answer with or inspect the current city's evidence", async () => {
   const staleAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "monterrey-air", title: null, query: null };
   const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "CDMX has AQI 55.", actions: [staleAction] }) }] }] });
