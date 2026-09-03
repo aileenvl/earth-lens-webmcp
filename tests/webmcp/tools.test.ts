@@ -18,6 +18,9 @@ test("exposes the accepted eleven-tool semantic contract with strict schemas", (
   assert.deepEqual(allTools.map((tool) => tool.name), ["get_workspace_state", "list_authoritative_sources", "set_layer_visibility", "set_time_window", "set_geographic_area", "query_selected_area", "inspect_observation", "analyze_evidence_coverage", "create_situation_lens_draft", "undo_last_agent_change", "focus_place"]);
   assert.equal(allTools.every((tool) => tool.description.length > 20 && tool.inputSchema.additionalProperties === false), true);
   assert.equal(allTools.some((tool) => /reviewed|publish|send/i.test(tool.name)), false);
+  const layerTool = allTools.find((tool) => tool.name === "set_layer_visibility");
+  const layerProperty = layerTool?.inputSchema.properties?.layerId as { enum?: string[] } | undefined;
+  assert.deepEqual(layerProperty?.enum, ["earthquakes", "air-quality", "natural-events", "thermal-hotspots"]);
 });
 test("uses one envelope and validates execution input again", async () => {
   assert.deepEqual(await decode("get_workspace_state"), { ok: true, data: state });

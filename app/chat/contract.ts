@@ -30,7 +30,7 @@ export type AssistantPlan = { answer: string; actions: AssistantAction[] };
 type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const isLayer = (value: unknown): value is LayerId => value === "earthquakes" || value === "air-quality" || value === "natural-events";
+const isLayer = (value: unknown): value is LayerId => value === "earthquakes" || value === "air-quality" || value === "natural-events" || value === "thermal-hotspots";
 const isWindow = (value: unknown): value is TimeWindow => value === "24h" || value === "7d" || value === "30d";
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
@@ -84,7 +84,7 @@ export const assistantPlanSchema = {
   properties: {
     answer: { type: "string" },
     actions: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["name", "window", "layerId", "visible", "latitude", "longitude", "radiusKm", "label", "observationId", "title", "query"], properties: {
-      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] }, query: { type: ["string", "null"] },
+      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", "thermal-hotspots", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] }, query: { type: ["string", "null"] },
     } } },
   },
 } as const;

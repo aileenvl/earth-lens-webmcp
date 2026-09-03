@@ -2,7 +2,7 @@ import type { InvestigationArea, TimeWindow } from "../domain/types.ts";
 import { validateInvestigationArea } from "../domain/validation.ts";
 import type { LayerId, ModelContextTool, ToolEnvelope, WebMcpActions } from "./types.ts";
 
-const layers: LayerId[] = ["earthquakes", "air-quality", "natural-events"];
+const layers: LayerId[] = ["earthquakes", "air-quality", "natural-events", "thermal-hotspots"];
 const windows: TimeWindow[] = ["24h", "7d", "30d"];
 const response = (envelope: ToolEnvelope) => ({ content: [{ type: "text" as const, text: JSON.stringify(envelope, null, 2) }] });
 const success = (data: unknown) => response({ ok: true, data });

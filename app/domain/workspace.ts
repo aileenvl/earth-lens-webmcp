@@ -8,7 +8,7 @@ import type {
 } from "./types.ts";
 import { validateEvidenceRecord, validateInvestigationArea } from "./validation.ts";
 
-const providers: Provider[] = ["usgs", "eonet", "open-meteo"];
+const providers: Provider[] = ["usgs", "eonet", "open-meteo", "nasa-firms"];
 const terminalSourceStates = ["ready", "empty", "unavailable"] as const;
 
 export function createWorkspaceState(): WorkspaceState {
@@ -28,6 +28,7 @@ export function createWorkspaceState(): WorkspaceState {
       usgs: { status: "idle" },
       eonet: { status: "idle" },
       "open-meteo": { status: "idle" },
+      "nasa-firms": { status: "idle" },
     },
     activity: [],
     revisions: [],

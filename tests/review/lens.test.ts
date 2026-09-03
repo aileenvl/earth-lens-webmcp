@@ -5,9 +5,9 @@ import { createSituationLensDraft, reviewSituationLensDraft, reviseSituationLens
 import type { EvidenceRecord } from "../../app/domain/types.ts";
 
 const evidence: EvidenceRecord = { id: "usgs:test", provider: "usgs", sourceUrl: "https://earthquake.usgs.gov/test", coordinates: { latitude: 1, longitude: 2 }, observedAt: "2026-08-30T10:00:00Z", fetchedAt: "2026-08-30T11:00:00Z", evidenceType: "earthquake", title: "Test", attributes: {}, limitation: "May change." };
-test("coverage distinguishes ready, unavailable, and modelled sources", () => {
-  const coverage = analyzeCoverage({ usgs: { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, eonet: { status: "unavailable", fetchedAt: "2026-08-30T11:00:00Z", reason: "offline" }, "open-meteo": { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 } }, [evidence], Date.parse("2026-08-30T11:10:00Z"));
-  assert.deepEqual(coverage.map((entry) => entry.state), ["ready", "unavailable", "modelled"]);
+test("coverage distinguishes ready, unavailable, modelled, and thermal-detection sources", () => {
+  const coverage = analyzeCoverage({ usgs: { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, eonet: { status: "unavailable", fetchedAt: "2026-08-30T11:00:00Z", reason: "offline" }, "open-meteo": { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, "nasa-firms": { status: "empty", fetchedAt: "2026-08-30T11:00:00Z", reason: "No detections; not an all-clear." } }, [evidence], Date.parse("2026-08-30T11:10:00Z"));
+  assert.deepEqual(coverage.map((entry) => entry.state), ["ready", "unavailable", "modelled", "empty"]);
 });
 test("draft retains citations and gaps and human edits create a new draft revision", () => {
   const coverage = [{ provider: "eonet" as const, state: "empty" as const, detail: "none" }];

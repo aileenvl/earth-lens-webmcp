@@ -56,6 +56,8 @@ test("rejects evidence without complete provenance", () => {
 
 test("attributes human and agent operations in immutable revisions", () => {
   const initial = createWorkspaceState();
+  assert.equal(initial.visibleProviders.includes("nasa-firms"), true);
+  assert.deepEqual(initial.sourceStates["nasa-firms"], { status: "idle" });
   const human = applyWorkspaceOperation(initial, {
     type: "set_area",
     actor: "human",
