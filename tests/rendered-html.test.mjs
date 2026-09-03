@@ -72,6 +72,9 @@ test("keeps ArcGIS browser-only and provides non-map area controls", async () =>
   assert.match(map, /https:\/\/js\.arcgis\.com\/5\.1\//);
   assert.match(map, /\$arcgis.*import/s);
   assert.match(map, /aria-label="Edit investigation area"/);
+  assert.match(page, /Environmental evidence map centered on \$\{selection\.label\}/);
+  assert.match(page, /areaAirQuality/);
+  assert.doesNotMatch(page, /aria-label="Environmental evidence map centered on Monterrey"/);
   assert.match(map, /Latitude/);
   assert.match(map, /Radius \(km\)/);
   assert.doesNotMatch(map, /^import .*@arcgis/m);
@@ -99,6 +102,8 @@ test("renders a real natural-language assistant form instead of a hard-coded pro
   assert.match(chat, /<form/);
   assert.match(chat, /fetch\("\/api\/chat"/);
   assert.match(chat, /Ask Earth Lens/);
+  assert.match(chat, /Outdoor plans\?/);
+  assert.match(chat, /Try another city/);
   assert.doesNotMatch(page, /Show environmental activity that may affect this area today/);
 });
 
@@ -108,6 +113,7 @@ test("air quality explains its current model scope and pollutant detail", async 
 
   assert.match(page, /<AirQualityCard/);
   assert.match(page, /selectedAqiSummary/);
+  assert.match(page, /setSelectedObservation\(\(current\) => current \?\? result\.data\.id\)/);
   assert.match(card, /getUsAqiTone/);
   assert.match(card, /aqi-\$\{tone\}/);
   assert.match(page, /Event history/);
@@ -115,4 +121,7 @@ test("air quality explains its current model scope and pollutant detail", async 
   assert.match(card, /Not a sensor/);
   assert.match(card, /PM₂\.₅/);
   assert.match(card, /PM₁₀/);
+  assert.match(card, /Outdoor planning cue/);
+  assert.match(page, /Likely driver/);
+  assert.match(page, /not a safety verdict/i);
 });

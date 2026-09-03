@@ -6,8 +6,9 @@ import { ArcgisInvestigationMap } from "./components/ArcgisInvestigationMap.tsx"
 import { AirQualityCard } from "./components/AirQualityCard.tsx";
 import { AssistantChat, type AssistantActionResult } from "./components/AssistantChat.tsx";
 import type { AssistantAction, ChatWorkspace } from "./chat/contract.ts";
-import { describeUsAqi, getUsAqiTone } from "./domain/air-quality.ts";
+import { describeUsAqi, getAqiActivityGuidance, getUsAqiTone } from "./domain/air-quality.ts";
 import { filterEvidenceForArea } from "./domain/evidence.ts";
+import { describeEventWindowStatus } from "./domain/event-window-summary.ts";
 import { analyzeCoverage } from "./domain/review/coverage.ts";
 import { createSituationLensDraft, reviewSituationLensDraft, type SituationLensDraft, type SituationLensReview } from "./domain/review/lens.ts";
 import { stepTimeWindow as getSteppedTimeWindow } from "./domain/time-window.ts";
@@ -87,6 +88,7 @@ export default function Home() {
   const selectionLatitude = selection.latitude;
   const selectionLongitude = selection.longitude;
   const areaEarthquakes = filterEvidenceForArea(earthquakes, selection);
+  const areaAirQuality = airQuality && filterEvidenceForArea([airQuality], selection).length === 1 ? airQuality : null;
   const evidenceResults = areaEarthquakes.length > 0 ? areaEarthquakes : earthquakes.slice(0, 5);
   const selectedEarthquake = earthquakes.find((record) => record.id === selectedObservation);
   const areaNaturalEvents = filterEvidenceForArea(naturalEvents, selection);
@@ -95,11 +97,11 @@ export default function Home() {
     ? [...areaEarthquakes, selectedEarthquake]
     : areaEarthquakes;
   const mapNaturalEvents = selectedNaturalEvent && !areaNaturalEvents.some((record) => record.id === selectedNaturalEvent.id) ? [...areaNaturalEvents, selectedNaturalEvent] : areaNaturalEvents;
-  const stateRef = useRef({ activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, airQuality, airQualityState });
+  const stateRef = useRef({ activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, airQuality: areaAirQuality, airQualityState });
 
   useEffect(() => {
-    stateRef.current = { activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, airQuality, airQualityState };
-  }, [activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, airQuality, airQualityState]);
+    stateRef.current = { activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, airQuality: areaAirQuality, airQualityState };
+  }, [activeLayers, timeWindow, selection, earthquakes, areaEarthquakes, earthquakeState, naturalEvents, areaNaturalEvents, naturalEventState, areaAirQuality, airQualityState]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -123,7 +125,7 @@ export default function Home() {
     const controller = new AbortController();
     void fetchAirQuality({ latitude: selectionLatitude, longitude: selectionLongitude }, { signal: controller.signal }).then((result) => {
       if (controller.signal.aborted) return;
-      if (result.status === "ready") { setAirQuality(result.data); setAirQualityState({ status: "ready", fetchedAt: result.fetchedAt, count: 1 }); }
+      if (result.status === "ready") { setAirQuality(result.data); setAirQualityState({ status: "ready", fetchedAt: result.fetchedAt, count: 1 }); setSelectedObservation((current) => current ?? result.data.id); }
       else if (result.status === "empty") { setAirQuality(null); setAirQualityState({ status: "empty", fetchedAt: result.fetchedAt, reason: result.reason }); }
       else if (result.code !== "ABORTED") { setAirQuality(null); setAirQualityState({ status: "unavailable", fetchedAt: result.fetchedAt, reason: result.message }); }
     });
@@ -193,7 +195,7 @@ export default function Home() {
       listSources: () => Object.entries(layerInfo).map(([id, source]) => ({ id, ...source, sourceState: sourceStates()[id === "earthquakes" ? "usgs" : id === "natural-events" ? "eonet" : "open-meteo"] })),
       setLayerVisibility: (layerId, visible) => { rememberAgentChange(); setActiveLayers((current) => visible ? [...new Set([...current, layerId])] : current.filter((item) => item !== layerId)); log(`Agent ${visible ? "showed" : "hid"} the ${layerInfo[layerId].label.toLowerCase()} layer.`); return { layerId, visible, revision: revisionRef.current, reversible: true }; },
       setTimeWindow: (window) => { rememberAgentChange(); changeTimeWindow(window); log(`Agent changed the evidence window to ${window}.`); return { window, revision: revisionRef.current, reversible: true }; },
-      setArea: (area) => { rememberAgentChange(); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(area); log(`Agent focused the map on “${area.label}”.`); return { area, revision: revisionRef.current, reversible: true }; },
+      setArea: (area) => { rememberAgentChange(); setSelectedObservation(null); setAirQuality(null); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(area); log(`Agent focused the map on “${area.label}”.`); return { area, revision: revisionRef.current, reversible: true }; },
       inspectEvidence: (id) => { const item = allEvidence().find((record) => record.id === id) ?? null; if (item) { setSelectedObservation(item.id); setPanel("uncertainty"); log(`Agent inspected ${item.title} and surfaced its limitation.`); } return item; },
       analyzeCoverage: () => { setPanel("uncertainty"); log("Agent surfaced evidence gaps and modelled coverage."); return { revision: revisionRef.current, coverage: analyzeCoverage(sourceStates(), scopedEvidence()), limitations: stateRef.current.activeLayers.map((id) => ({ layer: id, limitation: layerInfo[id].limitation })), warning: "No displayed observation is an official emergency alert." }; },
       createLensDraft: (title) => { const draft = createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); setLensDraft(draft); setLensReview(null); setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return draft; },
@@ -206,6 +208,7 @@ export default function Home() {
         const area: InvestigationArea = { latitude: resolution.candidate.latitude, longitude: resolution.candidate.longitude, radiusKm, label: resolution.candidate.label, updatedBy: "agent" };
         setSelectedObservation(null);
         setPanel(null);
+        setAirQuality(null);
         setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() });
         setSelection(area);
         log(`Agent resolved “${query}” with ArcGIS and focused the map on ${area.label}.`);
@@ -233,7 +236,7 @@ export default function Home() {
 
   const executeAssistantAction = useCallback(async (action: AssistantAction): Promise<AssistantActionResult> => {
     const tool = earthLensToolsRef.current.find((candidate) => candidate.name === action.name);
-    if (!tool) return { summary: `Could not run ${action.name}.` };
+    if (!tool) return { ok: false, summary: `Could not run ${action.name}.` };
     const input: Record<string, unknown> = action.name === "set_time_window" ? { window: action.window }
       : action.name === "set_layer_visibility" ? { layerId: action.layerId, visible: action.visible }
       : action.name === "set_geographic_area" ? { latitude: action.latitude, longitude: action.longitude, radiusKm: action.radiusKm, ...(action.label ? { label: action.label } : {}) }
@@ -243,17 +246,19 @@ export default function Home() {
       : {};
     const result = await tool.execute(input);
     const envelope = JSON.parse(result.content[0]?.text ?? "{}") as { ok?: boolean; data?: { area?: InvestigationArea; airQuality?: EvidenceRecord | null; airQualityStatus?: string }; error?: { message?: string } };
-    if (!envelope.ok) return { summary: envelope.error?.message ?? `Could not run ${action.name}.` };
+    if (!envelope.ok) return { ok: false, summary: envelope.error?.message ?? `Could not run ${action.name}.` };
     if (action.name === "focus_place" && envelope.data?.airQuality) {
       const evidence = envelope.data.airQuality;
       const category = describeUsAqi(Number(evidence.attributes.usAqi));
+      const activity = getAqiActivityGuidance(Number(evidence.attributes.usAqi));
       return {
+        ok: true,
         summary: `Focused the map on ${envelope.data.area?.label ?? action.query ?? "the requested place"}, refreshed its evidence, and opened the air-quality record`,
-        detail: `${envelope.data.area?.label ?? action.query}: US AQI ${evidence.attributes.usAqi} — ${category.label}. PM2.5 ${evidence.attributes.pm2_5} µg/m³; PM10 ${evidence.attributes.pm10} µg/m³. This is a modelled CAMS estimate, observed ${new Date(evidence.observedAt).toLocaleString()}.`,
+        detail: `${envelope.data.area?.label ?? action.query}: US AQI ${evidence.attributes.usAqi} — ${category.label}. ${activity.headline}. ${activity.general}${evidence.attributes.dominantPollutant ? ` Likely AQI driver: ${evidence.attributes.dominantPollutant}.` : ""} PM2.5 ${evidence.attributes.pm2_5} µg/m³; PM10 ${evidence.attributes.pm10} µg/m³. This is a modelled CAMS estimate, observed ${new Date(evidence.observedAt).toLocaleString()}; check official local monitoring before making health or safety decisions.`,
       };
     }
     if (action.name === "focus_place" && envelope.data?.airQualityStatus) {
-      return { summary: `Focused the map on ${envelope.data.area?.label ?? action.query ?? "the requested place"}`, detail: "The air-quality source could not return a current estimate for this location. The map moved, but Earth Lens will not invent a value." };
+      return { ok: true, summary: `Focused the map on ${envelope.data.area?.label ?? action.query ?? "the requested place"}`, detail: "The air-quality source could not return a current estimate for this location. The map moved, but Earth Lens will not invent a value." };
     }
     const summaries: Record<AssistantAction["name"], string> = {
       get_workspace_state: "Read the current workspace",
@@ -268,13 +273,13 @@ export default function Home() {
       undo_last_agent_change: "Undid the latest safe agent change",
       focus_place: `Focused the map on ${action.query ?? "the requested place"} and refreshed its evidence`,
     };
-    return { summary: summaries[action.name] };
+    return { ok: true, summary: summaries[action.name] };
   }, []);
 
-  const selected = [...earthquakes, ...naturalEvents, ...(airQuality ? [airQuality] : [])].find((item) => item.id === selectedObservation);
+  const selected = [...earthquakes, ...naturalEvents, ...(areaAirQuality ? [areaAirQuality] : [])].find((item) => item.id === selectedObservation);
   const selectedAqi = selected?.evidenceType === "air-quality" ? Number(selected.attributes.usAqi) : null;
   const selectedAqiDescription = selectedAqi === null ? null : describeUsAqi(selectedAqi);
-  const airQualityDescription = airQuality ? describeUsAqi(Number(airQuality.attributes.usAqi)) : null;
+  const airQualityDescription = areaAirQuality ? describeUsAqi(Number(areaAirQuality.attributes.usAqi)) : null;
 
   return (
     <main className="shell">
@@ -296,12 +301,14 @@ export default function Home() {
               timeWindow,
               selection: { latitude: selection.latitude, longitude: selection.longitude, radiusKm: selection.radiusKm, label: selection.label },
               sourceStates: { usgs: { status: earthquakeState.status }, eonet: { status: naturalEventState.status }, "open-meteo": { status: airQualityState.status } },
-              evidence: [...areaEarthquakes, ...areaNaturalEvents, ...(airQuality ? [airQuality] : [])].map((item) => ({
+              evidence: [...areaEarthquakes, ...areaNaturalEvents, ...(areaAirQuality ? [areaAirQuality] : [])].map((item) => ({
                 id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation,
                 facts: item.evidenceType === "air-quality" ? [
                   `US AQI ${item.attributes.usAqi} (${describeUsAqi(Number(item.attributes.usAqi)).label})`,
                   `PM2.5 ${item.attributes.pm2_5} ${item.attributes.pm2_5Unit}`,
                   `PM10 ${item.attributes.pm10} ${item.attributes.pm10Unit}`,
+                  `Outdoor planning cue: ${getAqiActivityGuidance(Number(item.attributes.usAqi)).headline}. ${getAqiActivityGuidance(Number(item.attributes.usAqi)).general}`,
+                  ...(item.attributes.dominantPollutant ? [`Likely AQI driver: ${item.attributes.dominantPollutant} (component AQI ${item.attributes.dominantPollutantAqi})`] : []),
                   "Current CAMS model estimate at the selected map center; the event history window does not apply.",
                 ] : [],
               })),
@@ -320,8 +327,8 @@ export default function Home() {
               const naturalEventSummary = naturalEventState.status === "ready"
                 ? `${areaNaturalEvents.length} in selected area`
                 : naturalEventState.status === "loading" ? "Loading live feed…" : naturalEventState.status === "unavailable" ? "Source unavailable" : "No events reported";
-              const airQualitySummary = airQualityState.status === "ready" && airQuality
-                ? `AQI ${airQuality.attributes.usAqi} · ${airQualityDescription?.label}`
+              const airQualitySummary = airQualityState.status === "ready" && areaAirQuality
+                ? `AQI ${areaAirQuality.attributes.usAqi} · ${airQualityDescription?.label}`
                 : airQualityState.status === "loading" ? "Loading model…" : "Model unavailable";
               const on = activeLayers.includes(id);
               return (
@@ -338,7 +345,7 @@ export default function Home() {
             <div className="sectionHead"><span>CURRENT AIR QUALITY</span><span>OPEN-METEO · CAMS</span></div>
             {airQualityState.status === "loading" && <p>Loading modelled conditions…</p>}
             {airQualityState.status === "unavailable" && <p role="alert">Air quality unavailable: {airQualityState.reason}</p>}
-            {airQuality && <AirQualityCard evidence={airQuality} selected={selectedObservation === airQuality.id} onInspect={() => { setSelectedObservation(airQuality.id); setPanel("uncertainty"); }} />}
+            {areaAirQuality && <AirQualityCard evidence={areaAirQuality} selected={selectedObservation === areaAirQuality.id} onInspect={() => { setSelectedObservation(areaAirQuality.id); setPanel("uncertainty"); }} />}
           </div>
 
           <div className="earthquakeResults naturalEventResults" aria-live="polite">
@@ -373,7 +380,7 @@ export default function Home() {
 
         <div
           className="map"
-          aria-label="Environmental evidence map centered on Monterrey"
+          aria-label={`Environmental evidence map centered on ${selection.label}`}
           role="region"
         >
           <ArcgisInvestigationMap
@@ -381,16 +388,21 @@ export default function Home() {
             evidence={[
               ...(activeLayers.includes("earthquakes") ? mapEarthquakes : []),
               ...(activeLayers.includes("natural-events") ? mapNaturalEvents : []),
-              ...(activeLayers.includes("air-quality") && airQuality ? [airQuality] : []),
+              ...(activeLayers.includes("air-quality") && areaAirQuality ? [areaAirQuality] : []),
             ]}
             selectedEvidenceId={selectedObservation}
             onEvidenceSelect={(id) => { setSelectedObservation(id); setPanel("uncertainty"); }}
-            onAreaChange={(nextArea) => { agentUndoRef.current = []; revisionRef.current += 1; setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(nextArea); log("You revised the investigation area.", "human"); }}
+            onAreaChange={(nextArea) => { agentUndoRef.current = []; revisionRef.current += 1; setSelectedObservation(null); setAirQuality(null); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(nextArea); log("You revised the investigation area.", "human"); }}
           />
-          <p className="timeWindowFeedback" role="status" aria-live="polite">
-            {earthquakeState.status === "loading" || naturalEventState.status === "loading"
-              ? `Updating earthquakes and natural events for ${timeWindow === "24h" ? "the last 24 hours" : timeWindow === "7d" ? "the last 7 days" : "the last 30 days"}. Air quality stays current.`
-              : `${timeWindow === "24h" ? "Last 24 hours" : timeWindow === "7d" ? "Last 7 days" : "Last 30 days"} applied · ${areaEarthquakes.length + areaNaturalEvents.length} mapped events. Air quality stays current.`}
+          <p className={`timeWindowFeedback ${areaEarthquakes.length + areaNaturalEvents.length === 0 ? "empty" : ""}`} role="status" aria-live="polite" title="Updating earthquakes and natural events changes the event history. Air quality stays current.">
+            {describeEventWindowStatus({
+              window: timeWindow,
+              place: selection.label,
+              radiusKm: selection.radiusKm,
+              count: areaEarthquakes.length + areaNaturalEvents.length,
+              loading: earthquakeState.status === "loading" || naturalEventState.status === "loading",
+              unavailable: earthquakeState.status === "unavailable" || naturalEventState.status === "unavailable",
+            })}
           </p>
           <div className="timebar" role="group" aria-label="Choose evidence time window" title="Choose event history window; air quality remains current.">
             <button aria-label="Previous time window" disabled={timeWindow === "24h"} onClick={() => stepTimeWindow("previous")}>◀</button>
@@ -408,7 +420,7 @@ export default function Home() {
               <p className="eyebrow">EVIDENCE, NOT A VERDICT</p>
               <strong>{selected ? selected.title : "Evidence needs context"}</strong>
               <p>{selected ? selected.limitation : "Select a live USGS event from the map or evidence list to inspect its provenance and limitations."}</p>
-              {selected?.evidenceType === "air-quality" && selectedAqi !== null && selectedAqiDescription && <><div className={`selectedAqiSummary aqi-${getUsAqiTone(selectedAqi)}`} aria-label={`US AQI ${selectedAqi}, ${selectedAqiDescription.label}`}><strong>{selectedAqi}</strong><span><b>{selectedAqiDescription.label}</b><small>US AQI</small></span></div><dl className="selectedAirFacts"><div><dt>PM₂.₅</dt><dd>{String(selected.attributes.pm2_5)} {String(selected.attributes.pm2_5Unit)}</dd></div><div><dt>PM₁₀</dt><dd>{String(selected.attributes.pm10)} {String(selected.attributes.pm10Unit)}</dd></div><div><dt>Coverage</dt><dd>Current model estimate at map center</dd></div></dl></>}
+              {selected?.evidenceType === "air-quality" && selectedAqi !== null && selectedAqiDescription && <><div className={`selectedAqiSummary aqi-${getUsAqiTone(selectedAqi)}`} aria-label={`US AQI ${selectedAqi}, ${selectedAqiDescription.label}`}><strong>{selectedAqi}</strong><span><b>{selectedAqiDescription.label}</b><small>US AQI</small></span></div><div className={`selectedGuidance aqi-${getUsAqiTone(selectedAqi)}`}><span>What this means outside</span><strong>{getAqiActivityGuidance(selectedAqi).headline}</strong><p>{getAqiActivityGuidance(selectedAqi).general}</p><small>Sensitive people: {getAqiActivityGuidance(selectedAqi).sensitive}</small></div><dl className="selectedAirFacts"><div><dt>Likely driver</dt><dd>{String(selected.attributes.dominantPollutant ?? "Not available")}</dd></div><div><dt>PM₂.₅</dt><dd>{String(selected.attributes.pm2_5)} {String(selected.attributes.pm2_5Unit)}</dd></div><div><dt>PM₁₀</dt><dd>{String(selected.attributes.pm10)} {String(selected.attributes.pm10Unit)}</dd></div><div><dt>Ozone</dt><dd>{selected.attributes.ozone === undefined ? "Not available" : `${String(selected.attributes.ozone)} ${String(selected.attributes.ozoneUnit)}`}</dd></div><div><dt>Nitrogen dioxide</dt><dd>{selected.attributes.nitrogenDioxide === undefined ? "Not available" : `${String(selected.attributes.nitrogenDioxide)} ${String(selected.attributes.nitrogenDioxideUnit)}`}</dd></div><div><dt>Coverage</dt><dd>Current model estimate at map center</dd></div></dl><p className="modelCaution">Planning cue, not a safety verdict. Check official local monitoring before making health or safety decisions. <a href="https://www.airnow.gov/aqi/aqi-basics/" target="_blank" rel="noreferrer">How EPA AQI categories work ↗</a></p></>}
               <div className="sourceStrip"><span>{selected ? selected.provider === "usgs" ? "USGS" : selected.provider === "eonet" ? "NASA EONET + origin" : "Open-Meteo + CAMS" : "Public sources"}</span><span>{selected ? new Date(selected.observedAt).toLocaleString() : "live when available"}</span></div>
               {selected && <a className="sourceLink" href={selected.sourceUrl} target="_blank" rel="noreferrer">Open originating source record ↗</a>}
               <button className="textAction" onClick={() => { setPanel("activity"); log("You asked the agent to inspect uncertainty.", "human"); }}>Ask the agent to investigate →</button>

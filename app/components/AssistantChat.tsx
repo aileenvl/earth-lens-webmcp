@@ -3,9 +3,10 @@
 import { useState, type FormEvent } from "react";
 
 import { parseAssistantPlan, type AssistantAction, type ChatHistoryItem, type ChatWorkspace } from "../chat/contract.ts";
+import { composeAssistantReply } from "../chat/reply.ts";
 
 type Message = ChatHistoryItem & { id: number; actions?: string[] };
-export type AssistantActionResult = { summary: string; detail?: string };
+export type AssistantActionResult = { ok: boolean; summary: string; detail?: string };
 type AssistantChatProps = {
   workspace: ChatWorkspace;
   onAction: (action: AssistantAction) => Promise<AssistantActionResult>;
@@ -40,10 +41,9 @@ export function AssistantChat({ workspace, onAction }: AssistantChatProps) {
       }
       const plan = parseAssistantPlan(body.data);
       if (!plan.ok) throw new Error("Invalid assistant response");
-      const actionResults: AssistantActionResult[] = [];
-      for (const action of plan.value.actions) actionResults.push(await onAction(action));
-      const details = actionResults.flatMap((result) => result.detail ? [result.detail] : []);
-      setMessages((current) => [...current, { id: Date.now() + 1, role: "assistant", content: [plan.value.answer, ...details].join("\n\n"), actions: actionResults.map((result) => result.summary) }]);
+      const actionResults: Array<AssistantActionResult & { actionName: AssistantAction["name"] }> = [];
+      for (const action of plan.value.actions) actionResults.push({ actionName: action.name, ...await onAction(action) });
+      setMessages((current) => [...current, { id: Date.now() + 1, role: "assistant", content: composeAssistantReply(plan.value.answer, actionResults), actions: actionResults.map((result) => result.summary) }]);
     } catch {
       setError({ message: "Earth Lens could not reach the assistant. Please try again." });
     } finally {
@@ -58,7 +58,7 @@ export function AssistantChat({ workspace, onAction }: AssistantChatProps) {
         <div><strong id="assistant-title">Ask Earth Lens</strong><span>Researches with site tools · actions stay visible</span></div>
       </div>
       <div className="chatMessages" aria-live="polite">
-        {messages.length === 0 && <p className="chatWelcome">Ask about air quality, earthquakes, or natural events. Earth Lens will open the evidence it used on the map.</p>}
+        {messages.length === 0 && <div className="chatWelcome"><p>Ask about a place or choose a starting point. Earth Lens will move the shared map and open the evidence it used.</p><div className="chatStarters" aria-label="Example questions"><button type="button" onClick={() => setInput("Is the air suitable for outdoor activities here today?")}>Outdoor plans?</button><button type="button" onClick={() => setInput("Show earthquakes and natural events here from the last 7 days")}>Last 7 days</button><button type="button" onClick={() => setInput("What is the air quality around Monterrey Nuevo León?")}>Try another city</button></div></div>}
         {messages.map((message) => (
           <div className={`chatMessage ${message.role}`} key={message.id}>
             <b>{message.role === "user" ? "You" : "Earth Lens"}</b>
