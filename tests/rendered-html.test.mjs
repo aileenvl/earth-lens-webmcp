@@ -125,3 +125,11 @@ test("air quality explains its current model scope and pollutant detail", async 
   assert.match(page, /Likely driver/);
   assert.match(page, /not a safety verdict/i);
 });
+
+test("desktop evidence and investigation rails remain scrollable within the app frame", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /\.rail\s*\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
+  assert.match(styles, /\.evidenceCard\s*\{[^}]*bottom:20px[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
+  assert.match(styles, /\.rail,\.evidenceCard\s*\{[^}]*scrollbar-color:/s);
+});
