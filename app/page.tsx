@@ -199,7 +199,7 @@ export default function Home() {
       createLensDraft: (title) => { const draft = createSituationLensDraft({ title, area: stateRef.current.selection, timeWindow: stateRef.current.timeWindow, evidence: scopedEvidence(), coverage: analyzeCoverage(sourceStates(), scopedEvidence()), createdAt: new Date().toISOString(), revision: revisionRef.current }); setLensDraft(draft); setLensReview(null); setPanel("lens"); log("Agent prepared a situation lens draft for your review."); return draft; },
       undoLastAgentChange: () => { const snapshot = agentUndoRef.current.pop(); if (!snapshot) return { undone: false, reason: "No reversible agent change is available." }; setActiveLayers(snapshot.activeLayers); changeTimeWindow(snapshot.timeWindow); setSelection(snapshot.selection); revisionRef.current += 1; log("Agent undid its last workspace change."); return { undone: true, revision: revisionRef.current, restoredFromRevision: snapshot.revision }; },
       focusPlace: async (query, radiusKm) => {
-        const resolution = await resolvePlace(query);
+        const resolution = await resolvePlace(query, { near: stateRef.current.selection });
         if (resolution.status === "ambiguous") return { ok: false as const, code: "AMBIGUOUS_PLACE", message: "That place name has multiple strong matches. Add a country, state, or neighborhood.", details: { candidates: resolution.candidates } };
         if (resolution.status !== "resolved") return { ok: false as const, code: resolution.status === "not-found" ? "PLACE_NOT_FOUND" : "PLACE_SEARCH_UNAVAILABLE", message: resolution.reason };
         rememberAgentChange();
@@ -387,6 +387,11 @@ export default function Home() {
             onEvidenceSelect={(id) => { setSelectedObservation(id); setPanel("uncertainty"); }}
             onAreaChange={(nextArea) => { agentUndoRef.current = []; revisionRef.current += 1; setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(nextArea); log("You revised the investigation area.", "human"); }}
           />
+          <p className="timeWindowFeedback" role="status" aria-live="polite">
+            {earthquakeState.status === "loading" || naturalEventState.status === "loading"
+              ? `Updating earthquakes and natural events for ${timeWindow === "24h" ? "the last 24 hours" : timeWindow === "7d" ? "the last 7 days" : "the last 30 days"}. Air quality stays current.`
+              : `${timeWindow === "24h" ? "Last 24 hours" : timeWindow === "7d" ? "Last 7 days" : "Last 30 days"} applied · ${areaEarthquakes.length + areaNaturalEvents.length} mapped events. Air quality stays current.`}
+          </p>
           <div className="timebar" role="group" aria-label="Choose evidence time window" title="Choose event history window; air quality remains current.">
             <button aria-label="Previous time window" disabled={timeWindow === "24h"} onClick={() => stepTimeWindow("previous")}>◀</button>
             <label htmlFor="evidence-time-window" title="Applies to earthquake and natural-event feeds; air quality remains current.">Event history</label>

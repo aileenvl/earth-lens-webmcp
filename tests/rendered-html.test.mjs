@@ -84,6 +84,9 @@ test("time-window controls are real labelled controls rather than a decorative s
   assert.match(page, /stepTimeWindow\("next"\)/);
   assert.match(page, /Choose evidence time window/);
   assert.match(page, /Choose event history window/);
+  assert.match(page, /Updating earthquakes and natural events/);
+  assert.match(page, /Air quality stays current/);
+  assert.match(page, /role="status"/);
   assert.doesNotMatch(page, /<div><span style=\{\{ width:/);
 });
 

@@ -29,6 +29,19 @@ test("returns choices instead of guessing between equally strong places", async 
   if (result.status === "ambiguous") assert.equal(result.candidates.length, 2);
 });
 
+test("uses the shared map area to resolve a clearly nearer same-name locality", async () => {
+  const fetcher: typeof fetch = async () => Response.json({ candidates: [
+    { address: "Monterrey, Nuevo León", location: { x: -100.3421, y: 25.7091 }, score: 100, attributes: { Addr_type: "Locality" } },
+    { address: "Monterrey, Nuevo León", location: { x: -100.3185, y: 25.6751 }, score: 100, attributes: { Addr_type: "Locality" } },
+    { address: "Monterrey, Casanare", location: { x: -72.8458, y: 4.8407 }, score: 100, attributes: { Addr_type: "Locality" } },
+  ] });
+
+  const result = await resolvePlace("Monterrey", { fetcher, near: { latitude: 19.42847, longitude: -99.12766 } });
+
+  assert.equal(result.status, "resolved");
+  if (result.status === "resolved") assert.equal(result.candidate.label, "Monterrey, Nuevo León");
+});
+
 test("collapses nearby locality aliases into one city result", async () => {
   const fetcher: typeof fetch = async () => Response.json({ candidates: [
     { address: "Mexico City, Ciudad de México", location: { x: -99.1417, y: 19.4305 }, score: 100, attributes: { Addr_type: "Locality" } },
