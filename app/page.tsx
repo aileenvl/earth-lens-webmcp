@@ -395,7 +395,7 @@ export default function Home() {
           <div className="timebar" role="group" aria-label="Choose evidence time window" title="Choose event history window; air quality remains current.">
             <button aria-label="Previous time window" disabled={timeWindow === "24h"} onClick={() => stepTimeWindow("previous")}>◀</button>
             <label htmlFor="evidence-time-window" title="Applies to earthquake and natural-event feeds; air quality remains current.">Event history</label>
-            <select id="evidence-time-window" value={timeWindow} onChange={(event) => chooseTimeWindow(event.target.value as TimeWindow)}>
+            <select id="evidence-time-window" aria-label="Event history time window" value={timeWindow} onChange={(event) => chooseTimeWindow(event.target.value as TimeWindow)}>
               <option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option>
             </select>
             <button aria-label="Next time window" disabled={timeWindow === "30d"} onClick={() => stepTimeWindow("next")}>▶</button>
