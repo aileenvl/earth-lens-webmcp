@@ -18,6 +18,39 @@ test("chat requests accept a bounded prompt and current workspace", () => {
   if (result.ok) assert.deepEqual(result.value.workspace.evidence[0].facts, ["Magnitude 3.1"]);
 });
 
+test("chat evidence limit preserves every available official source", () => {
+  const thermalHotspots = Array.from({ length: 60 }, (_, index) => ({
+    id: `nasa-firms-${index}`,
+    title: "Nominal-confidence satellite thermal hotspot",
+    provider: "nasa-firms",
+    observedAt: "2026-09-03T09:32:00.000Z",
+    limitation: "Not a confirmed wildfire.",
+    facts: ["Confidence nominal"],
+  }));
+  const result = parseChatRequest({
+    message: "Is the air suitable for outdoor activities today?",
+    history: [],
+    workspace: {
+      ...workspace,
+      evidence: [
+        workspace.evidence[0],
+        { id: "eonet-1", title: "NASA event", provider: "eonet", observedAt: "2026-09-03T08:00:00.000Z", limitation: "Not an alert.", facts: ["Open event"] },
+        ...thermalHotspots,
+        { id: "air-1", title: "US AQI 57", provider: "open-meteo", observedAt: "2026-09-03T13:00:00.000Z", limitation: "Modelled estimate.", facts: ["US AQI 57 (Moderate)"] },
+      ],
+    },
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.value.workspace.evidence.length, 50);
+    assert.deepEqual(
+      new Set(result.value.workspace.evidence.map((item) => item.provider)),
+      new Set(["usgs", "eonet", "nasa-firms", "open-meteo"]),
+    );
+  }
+});
+
 test("chat requests reject empty, oversized, and structurally invalid input", () => {
   assert.equal(parseChatRequest({ message: "", history: [], workspace }).ok, false);
   assert.equal(parseChatRequest({ message: "x".repeat(1001), history: [], workspace }).ok, false);

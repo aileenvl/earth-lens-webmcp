@@ -12,6 +12,9 @@ export type ChatWorkspace = {
 export type ChatRequest = { message: string; history: ChatHistoryItem[]; workspace: ChatWorkspace };
 
 const actionNames = ["get_workspace_state", "list_authoritative_sources", "set_layer_visibility", "set_time_window", "set_geographic_area", "query_selected_area", "inspect_observation", "analyze_evidence_coverage", "create_situation_lens_draft", "undo_last_agent_change", "focus_place"] as const;
+const officialEvidenceProviders = ["usgs", "eonet", "open-meteo", "nasa-firms"] as const;
+const maxEvidenceCandidates = 1000;
+const maxChatEvidence = 50;
 export type ChatActionName = (typeof actionNames)[number];
 export type AssistantAction = {
   name: ChatActionName;
@@ -47,10 +50,23 @@ export function parseChatRequest(input: unknown): ParseResult<ChatRequest> {
     if (!isRecord(item) || (item.role !== "user" && item.role !== "assistant") || typeof item.content !== "string" || item.content.length > 1000) return { ok: false, error: "Invalid chat history." };
     history.push({ role: item.role, content: item.content });
   }
-  const evidence: ChatWorkspace["evidence"] = [];
-  for (const item of workspace.evidence.slice(0, 50)) {
+  const evidenceCandidates: ChatWorkspace["evidence"] = [];
+  for (const item of workspace.evidence.slice(0, maxEvidenceCandidates)) {
     if (!isRecord(item) || typeof item.id !== "string" || typeof item.title !== "string" || typeof item.provider !== "string" || typeof item.observedAt !== "string" || typeof item.limitation !== "string" || !Array.isArray(item.facts) || item.facts.length > 8 || !item.facts.every((fact) => typeof fact === "string" && fact.length <= 160)) return { ok: false, error: "Invalid evidence." };
-    evidence.push({ id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation, facts: [...item.facts] });
+    evidenceCandidates.push({ id: item.id, title: item.title, provider: item.provider, observedAt: item.observedAt, limitation: item.limitation, facts: [...item.facts] });
+  }
+  const evidence: ChatWorkspace["evidence"] = [];
+  const reservedEvidence = new Set<ChatWorkspace["evidence"][number]>();
+  for (const provider of officialEvidenceProviders) {
+    const representative = evidenceCandidates.find((item) => item.provider === provider);
+    if (representative) {
+      evidence.push(representative);
+      reservedEvidence.add(representative);
+    }
+  }
+  for (const item of evidenceCandidates) {
+    if (evidence.length >= maxChatEvidence) break;
+    if (!reservedEvidence.has(item)) evidence.push(item);
   }
   const sourceStates: ChatWorkspace["sourceStates"] = {};
   for (const [key, value] of Object.entries(workspace.sourceStates)) {

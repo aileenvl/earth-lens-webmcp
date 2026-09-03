@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Preserved one record from every available official evidence source when the
+  assistant payload reaches its 50-record limit, so a large VIIRS result cannot
+  crowd current air quality out of an outdoor-planning answer.
 - Made current modelled air quality understandable at a glance with the US AQI
   category, PM2.5, PM10, model time, map-center scope, and an explicit
   “not a sensor” label.

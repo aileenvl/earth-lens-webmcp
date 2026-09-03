@@ -91,17 +91,16 @@ function normalizeFeature(value: unknown, fetchedAt: string, index: number): Val
   const satellite = attributes.satellite;
   const dayNight = attributes.daynight;
   const version = attributes.version;
-  const numbers = [
-    attributes.bright_ti4,
-    attributes.bright_ti5,
-    attributes.scan,
-    attributes.track,
-    attributes.frp,
-    attributes.hours_old,
-  ];
+  const brightnessI4K = attributes.bright_ti4;
+  const brightnessI5K = attributes.bright_ti5;
+  const pixelScanKm = attributes.scan;
+  const pixelTrackKm = attributes.track;
+  const frpMw = attributes.frp;
+  const hoursOld = attributes.hours_old;
 
   if (
-    !Number.isInteger(objectId)
+    !finite(objectId)
+    || !Number.isInteger(objectId)
     || !finite(latitude)
     || !finite(longitude)
     || latitude < -90
@@ -120,10 +119,15 @@ function normalizeFeature(value: unknown, fetchedAt: string, index: number): Val
     || (dayNight !== "D" && dayNight !== "N")
     || typeof version !== "string"
     || !/^[A-Za-z0-9.-]{1,20}$/.test(version)
-    || !numbers.every(finite)
-    || Number(attributes.scan) <= 0
-    || Number(attributes.track) <= 0
-    || Number(attributes.hours_old) < 0
+    || !finite(brightnessI4K)
+    || !finite(brightnessI5K)
+    || !finite(pixelScanKm)
+    || !finite(pixelTrackKm)
+    || !finite(frpMw)
+    || !finite(hoursOld)
+    || pixelScanKm <= 0
+    || pixelTrackKm <= 0
+    || hoursOld < 0
   ) {
     return invalid("NASA FIRMS returned invalid VIIRS geometry, time, or detection attributes.", { index });
   }
@@ -141,14 +145,14 @@ function normalizeFeature(value: unknown, fetchedAt: string, index: number): Val
     attributes: {
       confidence,
       satellite: satelliteNames[satellite],
-      frpMw: attributes.frp,
+      frpMw,
       dayNight: dayNight === "D" ? "day" : "night",
-      pixelScanKm: attributes.scan,
-      pixelTrackKm: attributes.track,
-      brightnessI4K: attributes.bright_ti4,
-      brightnessI5K: attributes.bright_ti5,
+      pixelScanKm,
+      pixelTrackKm,
+      brightnessI4K,
+      brightnessI5K,
       version,
-      hoursOld: attributes.hours_old,
+      hoursOld,
     },
     limitation: "A VIIRS thermal hotspot is a roughly 375 m satellite pixel with a detected heat anomaly, not a confirmed wildfire, fire perimeter, cause, or local safety verdict. Industrial heat, oil or gas activity, volcanoes, and algorithm error can produce a false positive; near-real-time data may be delayed or incomplete.",
   });
