@@ -12,6 +12,11 @@ add the remaining providers with independent failure handling; expose the same
 operations through WebMCP; complete human review and undo; then harden, publish,
 record, and submit.
 
+An accepted post-release evidence slice adds NASA LANCE/FIRMS VIIRS thermal
+hotspots through ArcGIS Living Atlas without changing the 11-tool WebMCP
+surface. The new layer uses the same typed evidence state as the human UI and
+is therefore queryable, inspectable, hideable, and reversible by an agent.
+
 ## Architecture decisions
 
 - ArcGIS Maps SDK for JavaScript 5.1 components are the map presentation layer.
@@ -68,6 +73,7 @@ T01 quality baseline
 - T12 — Run accessibility, security, performance, and browser hardening
 - T13 — Publish and verify the release candidate
 - T14 — Record, audit, and submit the hackathon entry
+- T15 — Add NASA VIIRS thermal-hotspot evidence
 
 ## Checkpoints
 
@@ -105,6 +111,11 @@ T01 quality baseline
   https://eonet.gsfc.nasa.gov/what-is-eonet
 - Open-Meteo/CAMS contract and attribution:
   https://open-meteo.com/en/docs/air-quality-api
+- NASA VIIRS 375 m product, FIRMS access, and ArcGIS query contract:
+  https://www.earthdata.nasa.gov/data/tools/firms,
+  https://www.earthdata.nasa.gov/s3fs-public/2025-06/VIIRS_C2_AF-375m_User_Guide_1.2.pdf,
+  https://www.arcgis.com/home/item.html?id=dece90af1a0242dcbf0ca36d30276aa3,
+  and https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/
 
 ## Open questions
 

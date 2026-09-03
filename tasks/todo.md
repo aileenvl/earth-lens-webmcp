@@ -357,6 +357,44 @@ investigation workspace.
 `docs/submission/IMPLEMENTATION.md`, `.openai/hosting.json`
 **Estimated scope:** Medium (4 files)
 
+## T15 — Add NASA VIIRS thermal-hotspot evidence
+
+**Description:** Add the public NASA LANCE/FIRMS VIIRS 375 m near-real-time
+thermal-detection feed through its ArcGIS Living Atlas FeatureServer. Use the
+same evidence records, source states, map selection, layer visibility, and
+WebMCP operations as the rest of Earth Lens.
+
+**Acceptance criteria:**
+
+- [ ] The adapter uses a fixed public GET endpoint, selected center/radius,
+      cacheable age filters, explicit fields, timeouts, cancellation, and a
+      200-record cap.
+- [ ] Every record retains source, acquisition time, coordinates, confidence,
+      satellite, FRP, day/night, pixel dimensions, version, and an honest
+      thermal-hotspot limitation.
+- [ ] Human layer controls and existing WebMCP tools expose the same visible,
+      inspectable records; no new WebMCP tool is introduced.
+- [ ] Loading, empty, malformed, unavailable, and 30-day/feed-window limitations
+      are visible and never presented as an all-clear.
+- [ ] The map, text list, evidence panel, source list, and situation-lens draft
+      all include the new provider without weakening human review boundaries.
+
+**Verification:**
+
+- [ ] Adapter URL/normalization/failure tests pass from fixtures.
+- [ ] Domain and WebMCP contract tests include `nasa-firms` and
+      `thermal-hotspots`.
+- [ ] Browser verification shows the same record selected from the list, map,
+      embedded assistant, and WebMCP inspection path.
+- [ ] `npm run check:task` passes.
+
+**Dependencies:** T08, T10, T12
+**Files likely touched:** `app/sources/nasa-firms.ts`, `app/domain/types.ts`,
+`app/domain/workspace.ts`, `app/webmcp/types.ts`, `app/webmcp/tools.ts`,
+`app/chat/contract.ts`, `app/chat/server.ts`, `app/components/ArcgisInvestigationMap.tsx`,
+`app/page.tsx`, focused tests, `README.md`, and submission implementation notes
+**Estimated scope:** Medium
+
 ## T14 — Record, audit, and submit
 
 **Description:** Produce the concise public demo and complete every Devpost field
