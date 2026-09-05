@@ -139,6 +139,12 @@ test("official SMN weather shares the outdoor-conditions UI and WebMCP workspace
   assert.match(card, /not a safety verdict/i);
 });
 
+test("the Sites worker does not read a hosting-forbidden default cache", async () => {
+  const workerSource = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(workerSource, /globalThis\.caches/);
+  assert.match(workerSource, /handleSmnRequest\(request\)/);
+});
+
 test("desktop evidence and investigation rails remain scrollable within the app frame", async () => {
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
