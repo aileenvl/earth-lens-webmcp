@@ -6,7 +6,8 @@
 
 - Made plural “show these thermal detections” requests keep the collection map
   visible, with a mapped-record count and explicit labels for nearby overlapping
-  VIIRS points instead of opening one record over the map.
+  VIIRS points instead of opening one record over the map. The assistant now
+  derives that count from the shared workspace instead of estimating it.
 - Preserved one record from every available official evidence source when the
   assistant payload reaches its 50-record limit, so a large VIIRS result cannot
   crowd current air quality out of an outdoor-planning answer.

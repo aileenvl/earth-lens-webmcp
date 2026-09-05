@@ -31,6 +31,14 @@ function showThermalHotspotsAction(): AssistantPlan["actions"][number] {
   return { name: "set_layer_visibility", window: null, layerId: "thermal-hotspots", visible: true, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null, query: null };
 }
 
+function describeThermalCollection(request: ChatRequest): string {
+  const count = request.workspace.evidence.filter((item) => item.provider === "nasa-firms").length;
+  const detection = count === 1 ? "detection" : "detections";
+  const verb = count === 1 ? "is" : "are";
+  const pronoun = count === 1 ? "it" : "them";
+  return `${count} NASA VIIRS thermal ${detection} ${verb} available in the current ${request.workspace.selection.label} selection. I’ll show ${pronoun} on the map. Nearby detections may share a numbered map marker. These are satellite heat anomalies, not confirmed wildfires or safety verdicts.`;
+}
+
 export async function requestAssistantPlan(request: ChatRequest, options: ChatServerOptions): Promise<AssistantPlan> {
   const fetcher = options.fetcher ?? fetch;
   const response = await fetcher("https://api.openai.com/v1/responses", {
@@ -71,7 +79,7 @@ export async function requestAssistantPlan(request: ChatRequest, options: ChatSe
     && /\b(all|these|those|\d+|detections|hotspots)\b/i.test(request.message);
   if (asksToShowThermalCollection) {
     const remainingActions = parsed.value.actions.filter((action) => action.name !== "inspect_observation" && !(action.name === "set_layer_visibility" && action.layerId === "thermal-hotspots"));
-    return { ...parsed.value, actions: [showThermalHotspotsAction(), ...remainingActions].slice(0, 4) };
+    return { answer: describeThermalCollection(request), actions: [showThermalHotspotsAction(), ...remainingActions].slice(0, 4) };
   }
   const currentThermal = request.workspace.evidence.find((item) => item.provider === "nasa-firms");
   if (asksAboutThermal && currentThermal && !parsed.value.actions.some((action) => action.name === "inspect_observation") && parsed.value.actions.length < 4) {

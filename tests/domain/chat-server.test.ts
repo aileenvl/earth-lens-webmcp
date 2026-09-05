@@ -84,7 +84,7 @@ test("a thermal-hotspot follow-up opens the shared NASA FIRMS record", async () 
 
 test("a request to show every thermal detection keeps the collection map visible", async () => {
   const inspectAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "nasa-firms:1", title: null, query: null };
-  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "Six detections are shown on the map.", actions: [inspectAction] }) }] }] });
+  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "Seven detections are shown on the map.", actions: [inspectAction] }) }] }] });
   const result = await requestAssistantPlan({
     message: "Can you show me those 6 satellite thermal detections?",
     history: [],
@@ -94,6 +94,8 @@ test("a request to show every thermal detection keeps the collection map visible
   assert.deepEqual(result.actions.map(({ name, layerId, visible }) => ({ name, layerId, visible })), [
     { name: "set_layer_visibility", layerId: "thermal-hotspots", visible: true },
   ]);
+  assert.match(result.answer, /^1 NASA VIIRS thermal detection is available in the current Escobedo, Nuevo León selection\./);
+  assert.doesNotMatch(result.answer, /Seven/);
 });
 
 test("a named city question cannot answer with or inspect the current city's evidence", async () => {
