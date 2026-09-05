@@ -115,6 +115,7 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
     let clickHandle: { remove: () => void } | undefined;
     let selectionGraphic: unknown;
     let evidenceGraphics: unknown[] = [];
+    let lastSelectedEvidenceId = selectedEvidenceIdRef.current;
     const mapElement = containerRef.current?.querySelector<ArcgisMapElement>("arcgis-map");
     if (!mapElement) return;
 
@@ -151,6 +152,8 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
           };
           drawSelectionRef.current(areaRef.current);
           drawEvidenceRef.current = (records, selectedId) => {
+            const clearedEvidenceSelection = lastSelectedEvidenceId !== null && selectedId === null;
+            lastSelectedEvidenceId = selectedId;
             for (const graphic of evidenceGraphics) view.graphics.remove(graphic);
             const markerGraphics = records.map((record) => {
               const magnitude = Number(record.attributes.magnitude ?? 0);
@@ -193,6 +196,8 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
             const selectedRecord = records.find((record) => record.id === selectedId);
             if (selectedRecord) {
               void view.goTo({ center: [selectedRecord.coordinates.longitude, selectedRecord.coordinates.latitude], zoom: 8 }, { animate: true });
+            } else if (clearedEvidenceSelection && selectionGraphic) {
+              void view.goTo(selectionGraphic, { animate: true });
             }
           };
           drawEvidenceRef.current(evidenceRef.current, selectedEvidenceIdRef.current);

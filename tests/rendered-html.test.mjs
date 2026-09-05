@@ -88,6 +88,8 @@ test("thermal detections use an unmistakable collection map treatment", async ()
   assert.match(map, /type:\s*"text"/);
   assert.match(map, /groupNearbyThermalDetections/);
   assert.match(map, /NASA VIIRS detections mapped/);
+  assert.match(map, /clearedEvidenceSelection/);
+  assert.match(map, /view\.goTo\(selectionGraphic/);
   assert.match(page, /layerId === "thermal-hotspots"[^}]*setSelectedObservation\(null\)[^}]*setPanel\(null\)/s);
   assert.match(page, /Showed all thermal detections on the map/);
 });

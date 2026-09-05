@@ -73,13 +73,17 @@ export async function requestAssistantPlan(request: ChatRequest, options: ChatSe
   if (asksAboutAir && currentAir && !parsed.value.actions.some((action) => action.name === "inspect_observation") && parsed.value.actions.length < 4) {
     return { ...parsed.value, actions: [...parsed.value.actions, { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: currentAir.id, title: null, query: null }] };
   }
-  const asksAboutThermal = /\b(fire|fires|wildfire|wildfires|thermal (?:hotspot|hotspots|detection|detections)|heat (?:hotspot|hotspots|detection|detections))\b/i.test(request.message);
-  const asksToShowThermalCollection = asksAboutThermal
-    && /\b(show|map|display|plot)\b/i.test(request.message)
-    && /\b(all|these|those|\d+|detections|hotspots)\b/i.test(request.message);
+  const thermalTerms = /\b(fire|fires|wildfire|wildfires|thermal (?:hotspot|hotspots|detection|detections)|heat (?:hotspot|hotspots|detection|detections)|satellite thermal (?:hotspot|hotspots|detection|detections))\b/i;
+  const asksToMap = /\b(show|map|display|plot)\b/i.test(request.message);
+  const asksAboutThermal = thermalTerms.test(request.message);
+  const recentConversation = request.history.slice(-2).map((item) => item.content).join(" ");
+  const refersToRecentThermalCollection = asksToMap
+    && /\b(them|these|those)\b/i.test(request.message)
+    && thermalTerms.test(recentConversation);
+  const asksToShowThermalCollection = asksToMap
+    && ((asksAboutThermal && /\b(all|these|those|them|\d+|detections|hotspots)\b/i.test(request.message)) || refersToRecentThermalCollection);
   if (asksToShowThermalCollection) {
-    const remainingActions = parsed.value.actions.filter((action) => action.name !== "inspect_observation" && !(action.name === "set_layer_visibility" && action.layerId === "thermal-hotspots"));
-    return { answer: describeThermalCollection(request), actions: [showThermalHotspotsAction(), ...remainingActions].slice(0, 4) };
+    return { answer: describeThermalCollection(request), actions: [showThermalHotspotsAction()] };
   }
   const currentThermal = request.workspace.evidence.find((item) => item.provider === "nasa-firms");
   if (asksAboutThermal && currentThermal && !parsed.value.actions.some((action) => action.name === "inspect_observation") && parsed.value.actions.length < 4) {

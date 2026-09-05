@@ -98,6 +98,33 @@ test("a request to show every thermal detection keeps the collection map visible
   assert.doesNotMatch(result.answer, /Seven/);
 });
 
+test("a pronoun follow-up maps the recent thermal collection without unrelated layers", async () => {
+  const layerAction = (layerId: "air-quality" | "thermal-hotspots" | "weather-forecast") => ({ name: "set_layer_visibility", window: null, layerId, visible: true, latitude: null, longitude: null, radiusKm: null, label: null, observationId: null, title: null, query: null });
+  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "I will map several layers.", actions: [layerAction("air-quality"), layerAction("thermal-hotspots"), layerAction("weather-forecast")] }) }] }] });
+  const result = await requestAssistantPlan({
+    message: "Can you map them?",
+    history: [
+      { role: "user", content: "How many satellite thermal detections are in Escobedo?" },
+      { role: "assistant", content: "NASA VIIRS returned 2 satellite thermal detections in the current selection." },
+    ],
+    workspace: {
+      activeLayers: ["air-quality", "thermal-hotspots", "weather-forecast"],
+      timeWindow: "24h",
+      selection: { latitude: 25.8, longitude: -100.35, radiusKm: 100, label: "Escobedo, Nuevo León" },
+      sourceStates: {},
+      evidence: [
+        { id: "nasa-firms:1", title: "Thermal detection", provider: "nasa-firms", observedAt: "2026-09-04T20:27:00Z", limitation: "Not a confirmed wildfire.", facts: ["FRP 7.82 MW"] },
+        { id: "nasa-firms:2", title: "Thermal detection", provider: "nasa-firms", observedAt: "2026-09-04T20:28:00Z", limitation: "Not a confirmed wildfire.", facts: ["FRP 4.72 MW"] },
+      ],
+    },
+  }, { apiKey: "test-key", fetcher });
+
+  assert.deepEqual(result.actions.map(({ name, layerId, visible }) => ({ name, layerId, visible })), [
+    { name: "set_layer_visibility", layerId: "thermal-hotspots", visible: true },
+  ]);
+  assert.match(result.answer, /^2 NASA VIIRS thermal detections are available in the current Escobedo, Nuevo León selection\./);
+});
+
 test("a named city question cannot answer with or inspect the current city's evidence", async () => {
   const staleAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "monterrey-air", title: null, query: null };
   const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "CDMX has AQI 55.", actions: [staleAction] }) }] }] });
