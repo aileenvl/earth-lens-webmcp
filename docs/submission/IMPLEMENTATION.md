@@ -30,10 +30,13 @@ Every surface calls it a thermal hotspot rather than treating a satellite heat
 anomaly as a confirmed wildfire.
 
 The SMN boundary runs on the server, decompresses and validates the official
-nationwide feed, caches it for approximately 75 minutes, and returns at most
-four forecast days for the nearest supported municipality. The browser never
-receives the nationwide payload. Weather temperature remains distinct from
-VIIRS land-surface thermal detections and from modelled CAMS air quality.
+nationwide feed, requests an approximately 75-minute server cache when the
+hosting runtime permits it, and returns at most four forecast days for the
+nearest supported municipality. The browser never receives the nationwide
+payload. On Sites, where the default Worker cache is unavailable, the adapter
+safely falls back to a fresh upstream request and a five-minute client cache.
+Weather temperature remains distinct from VIIRS land-surface thermal detections
+and from modelled CAMS air quality.
 
 ## Natural-language interaction
 
@@ -93,7 +96,7 @@ human interface.
 
 ## SMN and place-resolution snapshot — 2026-09-04
 
-- 75 logic tests and 9 rendered-source tests pass; overall logic line coverage
+- 76 logic tests and 10 rendered-source tests pass; overall logic line coverage
   is 94.68%.
 - TypeScript, ESLint, production build, dependency architecture, secret scans,
   and the high-severity dependency audit pass.

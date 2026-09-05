@@ -96,9 +96,10 @@ test("serves a bounded response and reuses the cached compressed feed", async ()
       stored.set(request.url, response.clone());
     },
   };
-  const fetchImpl: typeof fetch = async (input) => {
+  const fetchImpl: typeof fetch = async (input, init) => {
     upstreamRequests += 1;
     assert.equal(String(input), "https://smn.conagua.gob.mx/tools/GUI/webservices/?method=1");
+    assert.equal(init?.redirect, "follow");
     return new Response(compressed, {
       headers: {
         "content-type": "application/octet-stream",

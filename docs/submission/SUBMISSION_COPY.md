@@ -59,7 +59,7 @@ tools operate real application state. The demo proves discovery and invocation.
 
 **Execution:** A coherent public app combines a production map, five live
 signals, accessible textual controls, source provenance, graceful failure
-states, 84 automated tests, and measured production quality.
+states, 86 automated tests, and measured production quality.
 
 **Potential impact:** Complex geospatial evidence becomes approachable to
 community organizers, journalists, educators, and residents without removing

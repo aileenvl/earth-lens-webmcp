@@ -120,9 +120,12 @@ export async function handleSmnRequest(request: Request, options: Options = {}):
     try {
       const upstream = await (options.fetchImpl ?? fetch)(SMN_DAILY_UPSTREAM_URL, {
         signal: controller.signal,
-        redirect: "error",
+        redirect: "follow",
         headers: { accept: "application/octet-stream" },
       });
+      if (upstream.url && new URL(upstream.url).hostname !== "smn.conagua.gob.mx") {
+        return unavailable("UNEXPECTED_REDIRECT", "SMN redirected outside its official host.", fetchedAt);
+      }
       if (!upstream.ok) return unavailable("HTTP_ERROR", `SMN request failed with HTTP ${upstream.status}.`, fetchedAt);
       compressed = cacheResponse(upstream);
       await optionalCachePut(options.cache, cacheRequest, compressed.clone());
