@@ -97,7 +97,7 @@ human interface.
 ## SMN and place-resolution snapshot — 2026-09-04
 
 - 76 logic tests and 10 rendered-source tests pass; overall logic line coverage
-  is 94.68%.
+  is 94.66%.
 - TypeScript, ESLint, production build, dependency architecture, secret scans,
   and the high-severity dependency audit pass.
 - A real WebMCP `focus_place` call resolves Escobedo to Escobedo, Nuevo León,
