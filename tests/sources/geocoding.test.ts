@@ -42,6 +42,23 @@ test("uses the shared map area to resolve a clearly nearer same-name locality", 
   if (result.status === "resolved") assert.equal(result.candidate.label, "Monterrey, Nuevo León");
 });
 
+test("biases ArcGIS toward the shared map so General Escobedo is not excluded", async () => {
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.get("location"), "-100.3161,25.6866");
+    return Response.json({ candidates: [
+      { address: "Escobedo", location: { x: -100.3161561, y: 25.7826073 }, score: 100, attributes: { Addr_type: "POI" } },
+      { address: "Escobedo, Nuevo León", location: { x: -100.3515, y: 25.80399 }, score: 100, attributes: { Addr_type: "Locality" } },
+      { address: "Escobedo, San Juan, General Escobedo, Nuevo León", location: { x: -100.339639167, y: 25.839436667 }, score: 100, attributes: { Addr_type: "Locality" } },
+      { address: "Escobedo, Montemorelos, Nuevo León", location: { x: -99.87044, y: 25.16735 }, score: 100, attributes: { Addr_type: "Locality" } },
+    ] });
+  };
+
+  const result = await resolvePlace("Escobedo", { fetcher, near: { latitude: 25.6866, longitude: -100.3161 } });
+
+  assert.deepEqual(result, { status: "resolved", candidate: { label: "Escobedo, Nuevo León", latitude: 25.80399, longitude: -100.3515, score: 100, type: "Locality" } });
+});
+
 test("collapses nearby locality aliases into one city result", async () => {
   const fetcher: typeof fetch = async () => Response.json({ candidates: [
     { address: "Mexico City, Ciudad de México", location: { x: -99.1417, y: 19.4305 }, score: 100, attributes: { Addr_type: "Locality" } },

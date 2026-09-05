@@ -24,6 +24,11 @@ export async function resolvePlace(query: string, options: { fetcher?: typeof fe
   url.searchParams.set("singleLine", normalized);
   url.searchParams.set("outFields", "Addr_type,Match_addr");
   url.searchParams.set("maxLocations", "5");
+  if (options.near && finite(options.near.latitude) && finite(options.near.longitude)
+    && options.near.latitude >= -90 && options.near.latitude <= 90
+    && options.near.longitude >= -180 && options.near.longitude <= 180) {
+    url.searchParams.set("location", `${options.near.longitude},${options.near.latitude}`);
+  }
   url.searchParams.set("f", "json");
   try {
     const response = await (options.fetcher ?? fetch)(url, { signal: options.signal });
@@ -41,6 +46,14 @@ export async function resolvePlace(query: string, options: { fetcher?: typeof fe
       const representatives: PlaceCandidate[] = [];
       for (const candidate of [...competing].sort((left, right) => distanceKm(near, left) - distanceKm(near, right))) {
         if (!representatives.some((item) => item.label.toLocaleLowerCase() === candidate.label.toLocaleLowerCase())) representatives.push(candidate);
+      }
+      const nearbyWinner = representatives[0];
+      if (
+        nearbyWinner
+        && distanceKm(near, nearbyWinner) <= 50
+        && representatives.every((candidate) => distanceKm(near, candidate) <= 50 || distanceKm(nearbyWinner, candidate) > 50)
+      ) {
+        return { status: "resolved", candidate: nearbyWinner };
       }
       if (representatives.length > 1 && distanceKm(near, representatives[1]) - distanceKm(near, representatives[0]) >= 100) return { status: "resolved", candidate: representatives[0] };
     }
