@@ -125,6 +125,32 @@ test("serves a bounded response and reuses the cached compressed feed", async ()
   assert.equal(cached.headers.get("cache-control"), "public, max-age=4500");
 });
 
+test("still serves forecasts when the hosting runtime denies its optional cache", async () => {
+  const compressed = gzipSync(JSON.stringify(await fixture()));
+  const deniedCache: CacheLike = {
+    async match() {
+      throw new Error("Default cache is not permitted.");
+    },
+    async put() {
+      throw new Error("Default cache is not permitted.");
+    },
+  };
+
+  const response = await handleSmnRequest(
+    new Request("https://earth-lens.test/api/smn?latitude=25.6866&longitude=-100.3161"),
+    {
+      cache: deniedCache,
+      fetchImpl: async () => new Response(compressed),
+      now: () => fetchedAt,
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json() as { status: string; data?: unknown[] };
+  assert.equal(body.status, "ready");
+  assert.equal(body.data?.length, 2);
+});
+
 test("validates requests and contains upstream failures", async () => {
   const missing = await handleSmnRequest(new Request("https://earth-lens.test/api/smn"));
   assert.equal(missing.status, 400);

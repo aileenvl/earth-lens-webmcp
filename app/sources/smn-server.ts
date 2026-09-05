@@ -59,6 +59,25 @@ function cacheResponse(response: Response): Response {
   return new Response(response.body, { status: 200, headers });
 }
 
+async function optionalCacheMatch(cache: CacheLike | undefined, request: Request): Promise<Response | undefined> {
+  if (!cache) return undefined;
+  try {
+    return await cache.match(request);
+  } catch {
+    return undefined;
+  }
+}
+
+async function optionalCachePut(cache: CacheLike | undefined, request: Request, response: Response): Promise<void> {
+  if (!cache) return;
+  try {
+    await cache.put(request, response);
+  } catch {
+    // Hosting caches are an optimization; source availability must not depend on cache permission.
+    return;
+  }
+}
+
 async function decompressedText(response: Response): Promise<string> {
   const compressedLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(compressedLength) && compressedLength > MAX_COMPRESSED_BYTES) {
@@ -89,7 +108,7 @@ export async function handleSmnRequest(request: Request, options: Options = {}):
 
   const fetchedAt = (options.now ?? (() => new Date().toISOString()))();
   const cacheRequest = new Request(CACHE_KEY);
-  let compressed = options.cache ? await options.cache.match(cacheRequest) : undefined;
+  let compressed = await optionalCacheMatch(options.cache, cacheRequest);
   if (!compressed) {
     const controller = new AbortController();
     let timedOut = false;
@@ -106,7 +125,7 @@ export async function handleSmnRequest(request: Request, options: Options = {}):
       });
       if (!upstream.ok) return unavailable("HTTP_ERROR", `SMN request failed with HTTP ${upstream.status}.`, fetchedAt);
       compressed = cacheResponse(upstream);
-      if (options.cache) await options.cache.put(cacheRequest, compressed.clone());
+      await optionalCachePut(options.cache, cacheRequest, compressed.clone());
     } catch (error) {
       const aborted = error instanceof DOMException && error.name === "AbortError";
       return unavailable(
