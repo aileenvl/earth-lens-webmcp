@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { handleSmnRequest, type CacheLike } from "../app/sources/smn-server.ts";
 
 interface Env {
   ASSETS: Fetcher;
@@ -38,6 +39,11 @@ const worker = {
           return result.response();
         },
       }, allowedWidths);
+    }
+
+    if (url.pathname === "/api/smn") {
+      const runtimeCaches = globalThis.caches as (CacheStorage & { default?: CacheLike }) | undefined;
+      return handleSmnRequest(request, { cache: runtimeCaches?.default });
     }
 
     return handler.fetch(request, env, ctx);

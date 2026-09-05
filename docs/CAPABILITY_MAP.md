@@ -55,3 +55,33 @@ This capability map was accepted on 2026-08-29. Each module receives a specifica
 commands, structure, interfaces, tests, boundaries, and measurable success
 criteria. Implementation does not begin before that specification and its task
 list are reviewed.
+
+## Proposed community-context extension
+
+**Status:** Accepted on 2026-09-03.
+
+This extension keeps the existing map and WebMCP surface while adding clearer
+local context in dependency order. Temperature is additive: SMN weather and the
+existing NASA thermal-hotspot source remain separate evidence types with
+separate limitations.
+
+| Module ID | Responsibility | Depends on |
+|---|---|---|
+| `outdoor-conditions` | Add official SMN municipal weather forecasts for Mexico and combine them with existing CAMS air quality in a readable, non-verdict outdoor-planning view | `workspace-core`, `evidence-sources`, `webmcp-tools` |
+| `facility-context` | Add selected INEGI DENUE establishments as nearby registered-place context, without implying operation status, emissions, causation, or hazard | `workspace-core`, `arcgis-map`, `webmcp-tools` |
+| `risk-context` | Add a small, source-verified set of CENAPRED/CONAGUA flood or landslide context layers with dates, coverage, and limitations | `workspace-core`, `arcgis-map`, `webmcp-tools` |
+
+Proposed build order:
+
+```text
+outdoor-conditions
+        |
+        v
+facility-context
+        |
+        v
+risk-context
+```
+
+The hackathon-critical slice is `outdoor-conditions`. The later modules must not
+delay its verification or deployment.

@@ -1,5 +1,5 @@
 export type Actor = "human" | "agent";
-export type Provider = "usgs" | "eonet" | "open-meteo" | "nasa-firms";
+export type Provider = "usgs" | "eonet" | "open-meteo" | "nasa-firms" | "smn";
 export type TimeWindow = "24h" | "7d" | "30d";
 export type EvidenceId = `${Provider}:${string}`;
 
@@ -21,7 +21,7 @@ export interface EvidenceRecord {
   coordinates: Coordinates;
   observedAt: string;
   fetchedAt: string;
-  evidenceType: "earthquake" | "natural-event" | "air-quality" | "thermal-hotspot";
+  evidenceType: "earthquake" | "natural-event" | "air-quality" | "thermal-hotspot" | "weather-forecast";
   title: string;
   attributes: Readonly<Record<string, string | number | boolean | null>>;
   limitation: string;

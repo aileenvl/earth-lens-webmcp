@@ -58,6 +58,8 @@ test("attributes human and agent operations in immutable revisions", () => {
   const initial = createWorkspaceState();
   assert.equal(initial.visibleProviders.includes("nasa-firms"), true);
   assert.deepEqual(initial.sourceStates["nasa-firms"], { status: "idle" });
+  assert.equal(initial.visibleProviders.includes("smn"), true);
+  assert.deepEqual(initial.sourceStates.smn, { status: "idle" });
   const human = applyWorkspaceOperation(initial, {
     type: "set_area",
     actor: "human",
@@ -79,6 +81,40 @@ test("attributes human and agent operations in immutable revisions", () => {
   if (!agent.ok) return;
   assert.equal(agent.state.revisions.at(-1)?.actor, "agent");
   assert.deepEqual(initial.revisions, []);
+});
+
+test("accepts official SMN weather forecasts as separately attributed evidence", () => {
+  const weather: EvidenceRecord = {
+    id: "smn:19-39-20260903T00",
+    provider: "smn",
+    sourceUrl: "https://smn.conagua.gob.mx/es/web-service-api",
+    coordinates: { latitude: 25.6647, longitude: -100.3109 },
+    observedAt: "2026-09-03T06:00:00.000Z",
+    fetchedAt: "2026-09-03T23:55:00.000Z",
+    evidenceType: "weather-forecast",
+    title: "Monterrey forecast · 20.1–36.7 °C",
+    attributes: { minimumTemperatureC: 20.1, maximumTemperatureC: 36.7 },
+    limitation: "Official municipal forecast, not a station observation.",
+  };
+  const state = createWorkspaceState();
+  const loading = applyWorkspaceOperation(state, {
+    type: "set_source_state",
+    actor: "agent",
+    at: "2026-09-03T23:54:00.000Z",
+    provider: "smn",
+    sourceState: { status: "loading", requestedAt: "2026-09-03T23:54:00.000Z" },
+  });
+  assert.equal(loading.ok, true);
+  if (!loading.ok) return;
+  const ready = applyWorkspaceOperation(loading.state, {
+    type: "set_source_state",
+    actor: "agent",
+    at: "2026-09-03T23:55:00.000Z",
+    provider: "smn",
+    sourceState: { status: "ready", fetchedAt: "2026-09-03T23:55:00.000Z", count: 1 },
+  });
+  assert.equal(ready.ok, true);
+  assert.equal(validateEvidenceRecord(weather).ok, true);
 });
 
 test("every reversible mutation restores the exact prior state", () => {

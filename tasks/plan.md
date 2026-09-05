@@ -121,3 +121,98 @@ T01 quality baseline
 
 No product or architecture question blocks implementation. Public Sites access
 and the final YouTube account are release operations tracked in T13–T14.
+
+## Proposed plan: community outdoor context
+
+**Status:** Accepted on 2026-09-03. The `outdoor-conditions` specification is
+recorded in `docs/specs/SPEC-outdoor-conditions.md`.
+
+### Outcome
+
+Make Earth Lens answer “What is it like outside here today?” using the same
+visible workspace the human and agent share. The experience keeps:
+
+- Open-Meteo/CAMS modelled air quality;
+- NASA VIIRS thermal hotspots;
+- official SMN daily minimum/maximum temperature, rain, wind, gust, cloud cover,
+  and sky forecast for Mexican municipalities.
+
+The result is an evidence-backed planning explanation, not a safety verdict.
+Each contributing source retains its own timestamp, geography, provenance, and
+limitation. A nearby hotspot or registered facility never establishes a cause.
+
+### Architecture decisions
+
+- Add `smn` as a provider and `weather-forecast` as an evidence type; do not
+  replace or reinterpret `nasa-firms` thermal detections.
+- Fetch and decompress the nationwide SMN feed server-side. Cache it for about
+  75 minutes so browsers do not repeatedly download the full municipality file.
+- Normalize today plus the three-day outlook for the closest supported Mexican
+  municipality. Outside Mexico, show explicit unsupported coverage
+  while the existing worldwide sources continue to work.
+- Derive the outdoor-planning summary in a pure domain function from available
+  air-quality and weather records. Missing data produces a gap statement, never
+  an all-clear.
+- Reuse the 11 existing WebMCP tools. `query_selected_area`, source discovery,
+  inspection, drafts, and the embedded assistant all receive the same new state;
+  no chat-only fetch path and no hidden twelfth tool.
+- Keep raw measurements visible beside the friendly explanation so a person can
+  verify what the agent used.
+
+### Dependency graph
+
+```text
+T16 approve outdoor-conditions contract
+  -> T17 prove SMN server cache and parser
+      -> T18 add typed SMN evidence to workspace
+          -> T19 ship Outdoor conditions UI
+              -> T20 expose the same evidence to agent/chat
+                  -> T21 verify, document, and deploy
+
+Later, separately:
+T22 INEGI DENUE registered-place context
+  -> T23 selected CENAPRED/CONAGUA risk context
+```
+
+### Critical path
+
+1. **Contract first:** define Mexico-only coverage, four-day record cap, units,
+   source/error states, and exact non-verdict language.
+2. **Fail-fast data spike:** verify the compressed `method=1` response in the
+   production runtime, cache behavior, decompression, and Monterrey municipality
+   matching before changing UI state.
+3. **One complete vertical slice:** SMN adapter -> shared workspace -> outdoor
+   card -> WebMCP query -> embedded assistant answer.
+4. **Judge-visible verification:** ask about Monterrey, change place, inspect
+   contributing records, hide/show the source, and confirm the agent reacts to
+   the same visible state.
+5. **Only after that ships:** add DENUE and selected flood/landslide context.
+
+### Judge-visible demo
+
+1. A person focuses Monterrey and asks, “What is it like outside today?”
+2. The agent reads current map state and explains AQI plus temperature,
+   daily temperature range, rain chance, and wind using source timestamps.
+3. The shared card highlights the same measurements and states what is missing.
+4. The person changes the area or source visibility; the agent’s next answer
+   changes because it reads the updated workspace rather than scraping the UI.
+5. A VIIRS hotspot remains a distinct satellite detection and is never described
+   as weather, a confirmed fire, a company action, or proof of causation.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Nationwide SMN payload is large | Slow or wasteful requests | Server-side decompression and shared ~75-minute cache; bounded client response |
+| SMN timestamps/fields drift | Misleading forecast | Validate every remote field and return unavailable on malformed data |
+| Worldwide map implies worldwide SMN | Coverage confusion | Explicit “SMN municipal forecast: Mexico only” state; preserve global sources |
+| Friendly copy becomes a safety claim | Trust and submission risk | Use planning cues with contributing facts and gaps; never say “safe” or “all clear” |
+| Weather records crowd other evidence | Agent/UI context loss | Bound forecasts to four records and preserve at least one record per ready source |
+| Nearby facility is treated as a cause | Defamation and evidence risk | Keep DENUE in a later context module with explicit non-causation language |
+
+### Deferred scope
+
+- SIMA/SINAICA scraping, because no supported official feed has been obtained.
+- “Fracking” labels inferred from wells, proximity, or heat.
+- Company responsibility, emissions attribution, emergency alerts, evacuation,
+  publishing, sending, donating, or automated personal-safety decisions.
