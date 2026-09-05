@@ -82,6 +82,20 @@ test("a thermal-hotspot follow-up opens the shared NASA FIRMS record", async () 
   assert.deepEqual(result.actions.map(({ name, observationId }) => ({ name, observationId })), [{ name: "inspect_observation", observationId: "nasa-firms:1" }]);
 });
 
+test("a request to show every thermal detection keeps the collection map visible", async () => {
+  const inspectAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "nasa-firms:1", title: null, query: null };
+  const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "Six detections are shown on the map.", actions: [inspectAction] }) }] }] });
+  const result = await requestAssistantPlan({
+    message: "Can you show me those 6 satellite thermal detections?",
+    history: [],
+    workspace: { activeLayers: ["thermal-hotspots"], timeWindow: "24h", selection: { latitude: 25.8, longitude: -100.35, radiusKm: 100, label: "Escobedo, Nuevo León" }, sourceStates: {}, evidence: [{ id: "nasa-firms:1", title: "Nominal-confidence satellite thermal hotspot", provider: "nasa-firms", observedAt: "2026-09-04T20:27:00Z", limitation: "Not a confirmed wildfire.", facts: ["Confidence nominal", "FRP 7.82 MW"] }] },
+  }, { apiKey: "test-key", fetcher });
+
+  assert.deepEqual(result.actions.map(({ name, layerId, visible }) => ({ name, layerId, visible })), [
+    { name: "set_layer_visibility", layerId: "thermal-hotspots", visible: true },
+  ]);
+});
+
 test("a named city question cannot answer with or inspect the current city's evidence", async () => {
   const staleAction = { name: "inspect_observation", window: null, layerId: null, visible: null, latitude: null, longitude: null, radiusKm: null, label: null, observationId: "monterrey-air", title: null, query: null };
   const fetcher: typeof fetch = async () => Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ answer: "CDMX has AQI 55.", actions: [staleAction] }) }] }] });

@@ -61,9 +61,29 @@ function loadArcgisSdk(): Promise<void> {
   return arcgisLoader;
 }
 
+function groupNearbyThermalDetections(records: readonly EvidenceRecord[]) {
+  const groups: Array<{ latitude: number; longitude: number; records: EvidenceRecord[] }> = [];
+  for (const record of records) {
+    if (record.provider !== "nasa-firms") continue;
+    const group = groups.find((candidate) => (
+      Math.abs(candidate.latitude - record.coordinates.latitude) < 0.01
+      && Math.abs(candidate.longitude - record.coordinates.longitude) < 0.01
+    ));
+    if (group) {
+      group.records.push(record);
+      group.latitude = group.records.reduce((sum, item) => sum + item.coordinates.latitude, 0) / group.records.length;
+      group.longitude = group.records.reduce((sum, item) => sum + item.coordinates.longitude, 0) / group.records.length;
+    } else {
+      groups.push({ latitude: record.coordinates.latitude, longitude: record.coordinates.longitude, records: [record] });
+    }
+  }
+  return groups.filter((group) => group.records.length > 1);
+}
+
 export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onAreaChange, onEvidenceSelect }: ArcgisInvestigationMapProps) {
   const [status, setStatus] = useState<MapStatus>("loading");
   const [formError, setFormError] = useState<string | null>(null);
+  const thermalDetectionCount = evidence.filter((record) => record.provider === "nasa-firms").length;
   const containerRef = useRef<HTMLElement | null>(null);
   const areaRef = useRef(area);
   const onAreaChangeRef = useRef(onAreaChange);
@@ -132,7 +152,7 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
           drawSelectionRef.current(areaRef.current);
           drawEvidenceRef.current = (records, selectedId) => {
             for (const graphic of evidenceGraphics) view.graphics.remove(graphic);
-            evidenceGraphics = records.map((record) => {
+            const markerGraphics = records.map((record) => {
               const magnitude = Number(record.attributes.magnitude ?? 0);
               const radiativePower = Number(record.attributes.frpMw ?? 0);
               const selected = record.id === selectedId;
@@ -142,19 +162,33 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
                     : record.provider === "smn" ? [78, 134, 160, 0.92]
                       : [115, 214, 177, 0.92];
               const markerSize = record.provider === "nasa-firms"
-                ? Math.max(8, Math.min(20, 8 + Math.log2(1 + Math.max(0, radiativePower)) * 2))
+                ? Math.max(14, Math.min(24, 14 + Math.log2(1 + Math.max(0, radiativePower)) * 2))
                 : Math.max(7, Math.min(22, 6 + magnitude * 2));
               return new Graphic({
                 geometry: { type: "point", longitude: record.coordinates.longitude, latitude: record.coordinates.latitude },
                 attributes: { evidenceId: record.id },
                 symbol: {
                   type: "simple-marker",
+                  ...(record.provider === "nasa-firms" ? { style: "diamond" } : { style: "circle" }),
                   color: selected ? [185, 62, 45, 0.95] : color,
                   size: markerSize,
-                  outline: { color: [255, 255, 255, 0.95], width: selected ? 3 : 1.5 },
+                  outline: { color: [255, 255, 255, 0.95], width: selected ? 4 : record.provider === "nasa-firms" ? 2.5 : 1.5 },
                 },
               });
             });
+            const overlapLabels = groupNearbyThermalDetections(records).map((group) => new Graphic({
+              geometry: { type: "point", longitude: group.longitude, latitude: group.latitude },
+              attributes: { overlappingEvidenceCount: group.records.length },
+              symbol: {
+                type: "text",
+                text: String(group.records.length),
+                color: [255, 255, 255, 1],
+                haloColor: [129, 42, 30, 1],
+                haloSize: 1,
+                font: { family: "Arial", size: 9, weight: "bold" },
+              },
+            }));
+            evidenceGraphics = [...markerGraphics, ...overlapLabels];
             for (const graphic of evidenceGraphics) view.graphics.add(graphic);
             const selectedRecord = records.find((record) => record.id === selectedId);
             if (selectedRecord) {
@@ -245,6 +279,12 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
         {status === "loading" && "Loading ArcGIS map…"}
         {status === "unavailable" && "Map unavailable. The investigation controls remain usable below."}
       </p>
+
+      {thermalDetectionCount > 0 && (
+        <p className="thermalMapCount" role="status">
+          <span>{thermalDetectionCount}</span> NASA VIIRS detections mapped
+        </p>
+      )}
 
       <form key={`${area.latitude}:${area.longitude}:${area.radiusKm}`} className="areaEditor" aria-label="Edit investigation area" onSubmit={submitArea}>
         <strong>{area.label}</strong>

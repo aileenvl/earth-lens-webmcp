@@ -277,7 +277,16 @@ export default function Home() {
     const tools = createEarthLensTools({
       getState: () => ({ activeLayers: stateRef.current.activeLayers, timeWindow: stateRef.current.timeWindow, selection: stateRef.current.selection, evidence: scopedEvidence(), areaEvidence: scopedEvidence(), sourceStates: sourceStates(), revision: revisionRef.current }),
       listSources: () => Object.entries(layerInfo).map(([id, source]) => ({ id, ...source, sourceState: sourceStates()[source.provider] })),
-      setLayerVisibility: (layerId, visible) => { rememberAgentChange(); setActiveLayers((current) => visible ? [...new Set([...current, layerId])] : current.filter((item) => item !== layerId)); log(`Agent ${visible ? "showed" : "hid"} the ${layerInfo[layerId].label.toLowerCase()} layer.`); return { layerId, visible, revision: revisionRef.current, reversible: true }; },
+      setLayerVisibility: (layerId, visible) => {
+        rememberAgentChange();
+        if (layerId === "thermal-hotspots" && visible) {
+          setSelectedObservation(null);
+          setPanel(null);
+        }
+        setActiveLayers((current) => visible ? [...new Set([...current, layerId])] : current.filter((item) => item !== layerId));
+        log(`Agent ${visible ? "showed" : "hid"} the ${layerInfo[layerId].label.toLowerCase()} layer.`);
+        return { layerId, visible, revision: revisionRef.current, reversible: true };
+      },
       setTimeWindow: (window) => { rememberAgentChange(); changeTimeWindow(window); log(`Agent changed the evidence window to ${window}.`); return { window, revision: revisionRef.current, reversible: true }; },
       setArea: (area) => { rememberAgentChange(); setSelectedObservation(null); setAirQuality(null); setAirQualityState({ status: "loading", requestedAt: new Date().toISOString() }); setThermalHotspots([]); setThermalHotspotState({ status: "loading", requestedAt: new Date().toISOString() }); setWeatherForecasts([]); setWeatherState({ status: "loading", requestedAt: new Date().toISOString() }); setSelection(area); log(`Agent focused the map on “${area.label}”.`); return { area, revision: revisionRef.current, reversible: true }; },
       inspectEvidence: (id) => { const item = allEvidence().find((record) => record.id === id) ?? null; if (item) { setSelectedObservation(item.id); setPanel("uncertainty"); log(`Agent inspected ${item.title} and surfaced its limitation.`); } return item; },
@@ -396,7 +405,9 @@ export default function Home() {
     const summaries: Record<AssistantAction["name"], string> = {
       get_workspace_state: "Read the current workspace",
       list_authoritative_sources: "Checked source provenance",
-      set_layer_visibility: `Updated the ${action.layerId ?? "requested"} layer`,
+      set_layer_visibility: action.layerId === "thermal-hotspots" && action.visible
+        ? "Showed all thermal detections on the map"
+        : `Updated the ${action.layerId ?? "requested"} layer`,
       set_time_window: `Changed the time range to ${action.window ?? "the requested window"}`,
       set_geographic_area: `Updated the investigation area${action.label ? ` to ${action.label}` : ""}`,
       query_selected_area: "Queried the selected area",

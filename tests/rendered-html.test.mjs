@@ -80,6 +80,18 @@ test("keeps ArcGIS browser-only and provides non-map area controls", async () =>
   assert.doesNotMatch(map, /^import .*@arcgis/m);
 });
 
+test("thermal detections use an unmistakable collection map treatment", async () => {
+  const map = await readFile(new URL("../app/components/ArcgisInvestigationMap.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(map, /style:\s*"diamond"/);
+  assert.match(map, /type:\s*"text"/);
+  assert.match(map, /groupNearbyThermalDetections/);
+  assert.match(map, /NASA VIIRS detections mapped/);
+  assert.match(page, /layerId === "thermal-hotspots"[^}]*setSelectedObservation\(null\)[^}]*setPanel\(null\)/s);
+  assert.match(page, /Showed all thermal detections on the map/);
+});
+
 test("time-window controls are real labelled controls rather than a decorative slider", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
