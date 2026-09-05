@@ -3,9 +3,9 @@
 ## Setup before recording
 
 - Use Chrome with WebMCP enabled and a fresh Earth Lens session.
-- Sign in with ChatGPT so the embedded assistant is ready.
+- Open the public app in a fresh session; no sign-in is required.
 - Keep DevTools closed; zoom so the map, evidence panel, and agent are legible.
-- Confirm all three live-source checks are green.
+- Confirm the five live-signal states are ready, empty, or honestly unavailable.
 - Record system audio/microphone and show the URL once.
 
 ## 0:00–0:20 — Problem and promise
@@ -14,7 +14,7 @@
 to guess their way through a visual interface. Earth Lens gives the website a
 semantic tool layer, so a person and an agent can investigate the same map.”
 
-Show Monterrey, the three live signals, and their source labels.
+Show Monterrey, the five live signals, and their source labels.
 
 ## 0:20–0:45 — Human establishes context
 

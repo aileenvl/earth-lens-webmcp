@@ -12,7 +12,7 @@ export type ChatWorkspace = {
 export type ChatRequest = { message: string; history: ChatHistoryItem[]; workspace: ChatWorkspace };
 
 const actionNames = ["get_workspace_state", "list_authoritative_sources", "set_layer_visibility", "set_time_window", "set_geographic_area", "query_selected_area", "inspect_observation", "analyze_evidence_coverage", "create_situation_lens_draft", "undo_last_agent_change", "focus_place"] as const;
-const officialEvidenceProviders = ["usgs", "eonet", "open-meteo", "nasa-firms"] as const;
+const officialEvidenceProviders = ["usgs", "eonet", "open-meteo", "nasa-firms", "smn"] as const;
 const maxEvidenceCandidates = 1000;
 const maxChatEvidence = 50;
 export type ChatActionName = (typeof actionNames)[number];
@@ -33,7 +33,7 @@ export type AssistantPlan = { answer: string; actions: AssistantAction[] };
 type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const isLayer = (value: unknown): value is LayerId => value === "earthquakes" || value === "air-quality" || value === "natural-events" || value === "thermal-hotspots";
+const isLayer = (value: unknown): value is LayerId => value === "earthquakes" || value === "air-quality" || value === "natural-events" || value === "thermal-hotspots" || value === "weather-forecast";
 const isWindow = (value: unknown): value is TimeWindow => value === "24h" || value === "7d" || value === "30d";
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
@@ -100,7 +100,7 @@ export const assistantPlanSchema = {
   properties: {
     answer: { type: "string" },
     actions: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["name", "window", "layerId", "visible", "latitude", "longitude", "radiusKm", "label", "observationId", "title", "query"], properties: {
-      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", "thermal-hotspots", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] }, query: { type: ["string", "null"] },
+      name: { type: "string", enum: actionNames }, window: { type: ["string", "null"], enum: ["24h", "7d", "30d", null] }, layerId: { type: ["string", "null"], enum: ["earthquakes", "air-quality", "natural-events", "thermal-hotspots", "weather-forecast", null] }, visible: { type: ["boolean", "null"] }, latitude: { type: ["number", "null"] }, longitude: { type: ["number", "null"] }, radiusKm: { type: ["number", "null"] }, label: { type: ["string", "null"] }, observationId: { type: ["string", "null"] }, title: { type: ["string", "null"] }, query: { type: ["string", "null"] },
     } } },
   },
 } as const;

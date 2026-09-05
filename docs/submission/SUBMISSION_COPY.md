@@ -34,12 +34,13 @@ immediately govern the agent’s next result.
 ## What people and agents can do together now
 
 A person can establish local context that an agent cannot infer safely. The
-agent can then combine live USGS earthquakes, NASA EONET natural events, and
-modelled Open-Meteo/CAMS air quality; distinguish missing coverage from no
-reported events; and turn the investigation into a provenance-rich situation
-lens. The person can correct scope and review the artifact. Previously this
-required manually coordinating multiple data sites or trusting an agent to
-guess a complex visual interface.
+agent can then combine live USGS earthquakes, NASA EONET natural events, NASA
+VIIRS thermal detections, modelled Open-Meteo/CAMS air quality, and official
+SMN/CONAGUA municipal weather; distinguish missing coverage from no reported
+events; and turn the investigation into a provenance-rich situation lens. The
+person can correct scope and review the artifact. Previously this required
+manually coordinating multiple data sites or trusting an agent to guess a
+complex visual interface.
 
 ## How WebMCP was implemented
 
@@ -56,9 +57,9 @@ experience.
 **WebMCP leverage:** Eleven non-trivial read, mutation, analysis, drafting, and undo
 tools operate real application state. The demo proves discovery and invocation.
 
-**Execution:** A coherent public app combines a production map, three live data
-sources, accessible textual controls, source provenance, graceful failure
-states, 35 automated checks, and measured production quality.
+**Execution:** A coherent public app combines a production map, five live
+signals, accessible textual controls, source provenance, graceful failure
+states, 84 automated tests, and measured production quality.
 
 **Potential impact:** Complex geospatial evidence becomes approachable to
 community organizers, journalists, educators, and residents without removing

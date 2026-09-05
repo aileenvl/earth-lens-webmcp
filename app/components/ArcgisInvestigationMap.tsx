@@ -139,7 +139,8 @@ export function ArcgisInvestigationMap({ area, evidence, selectedEvidenceId, onA
               const color = record.provider === "usgs" ? [243, 180, 95, 0.88]
                 : record.provider === "eonet" ? [239, 118, 95, 0.88]
                   : record.provider === "nasa-firms" ? [211, 74, 47, 0.92]
-                    : [115, 214, 177, 0.92];
+                    : record.provider === "smn" ? [78, 134, 160, 0.92]
+                      : [115, 214, 177, 0.92];
               const markerSize = record.provider === "nasa-firms"
                 ? Math.max(8, Math.min(20, 8 + Math.log2(1 + Math.max(0, radiativePower)) * 2))
                 : Math.max(7, Math.min(22, 6 + magnitude * 2));

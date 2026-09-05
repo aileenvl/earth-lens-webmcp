@@ -37,6 +37,7 @@ This enables a collaboration loop that a chat overlay alone cannot provide:
 | Earthquakes | [USGS GeoJSON feeds](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) | Observed events; status and source timestamps retained |
 | Natural events | [NASA EONET v3](https://eonet.gsfc.nasa.gov/docs/v3) | Aggregated event geometry; approximate and for general information |
 | Air quality | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) using CAMS | Modelled forecast values, never presented as local sensor measurements |
+| Outdoor weather | [SMN / CONAGUA daily municipal forecast](https://smn.conagua.gob.mx/es/web-service-api) | Official Mexico-only temperature, rain, wind, gust, and sky forecast; not a station observation or safety verdict |
 | Thermal hotspots | [NASA LANCE/FIRMS VIIRS via ArcGIS Living Atlas](https://www.arcgis.com/home/item.html?id=dece90af1a0242dcbf0ca36d30276aa3) | Near-real-time 375 m heat detections with confidence and FRP; never presented as confirmed wildfires |
 
 The map uses ArcGIS Maps SDK for JavaScript 5.1 with an OpenStreetMap basemap.
@@ -113,6 +114,8 @@ secret scanning, dependency audit, accessibility, and browser performance.
 - Public feeds can be delayed, incomplete, revised, or unavailable.
 - EONET geometry is aggregated and may not describe current local impact.
 - CAMS air quality is modelled and is not a nearby regulatory sensor reading.
+- SMN weather is an official municipality-level forecast for Mexico, not a
+  station observation, emergency alert, or guarantee for a specific street.
 - VIIRS hotspots indicate unusual heat within an approximately 375 m satellite
   pixel. They can be delayed, incomplete, or false positive and do not confirm
   a wildfire, perimeter, cause, or local safety condition. The feed retains

@@ -4,10 +4,10 @@ import test from "node:test";
 import { parseAssistantPlan, parseChatRequest } from "../../app/chat/contract.ts";
 
 const workspace = {
-  activeLayers: ["earthquakes", "air-quality", "natural-events", "thermal-hotspots"],
+  activeLayers: ["earthquakes", "air-quality", "natural-events", "thermal-hotspots", "weather-forecast"],
   timeWindow: "24h",
   selection: { latitude: 25.6866, longitude: -100.3161, radiusKm: 100, label: "Monterrey region" },
-  sourceStates: { usgs: { status: "ready" }, eonet: { status: "empty" }, "open-meteo": { status: "ready" }, "nasa-firms": { status: "ready" } },
+  sourceStates: { usgs: { status: "ready" }, eonet: { status: "empty" }, "open-meteo": { status: "ready" }, "nasa-firms": { status: "ready" }, smn: { status: "ready" } },
   evidence: [{ id: "usgs-1", title: "M 3.1 test", provider: "usgs", observedAt: "2026-08-30T12:00:00.000Z", limitation: "Preliminary.", facts: ["Magnitude 3.1"] }],
 };
 
@@ -37,6 +37,7 @@ test("chat evidence limit preserves every available official source", () => {
         { id: "eonet-1", title: "NASA event", provider: "eonet", observedAt: "2026-09-03T08:00:00.000Z", limitation: "Not an alert.", facts: ["Open event"] },
         ...thermalHotspots,
         { id: "air-1", title: "US AQI 57", provider: "open-meteo", observedAt: "2026-09-03T13:00:00.000Z", limitation: "Modelled estimate.", facts: ["US AQI 57 (Moderate)"] },
+        { id: "smn-1", title: "Monterrey forecast", provider: "smn", observedAt: "2026-09-03T06:00:00.000Z", limitation: "Municipal forecast.", facts: ["Temperature 20–37 °C"] },
       ],
     },
   });
@@ -46,7 +47,7 @@ test("chat evidence limit preserves every available official source", () => {
     assert.equal(result.value.workspace.evidence.length, 50);
     assert.deepEqual(
       new Set(result.value.workspace.evidence.map((item) => item.provider)),
-      new Set(["usgs", "eonet", "nasa-firms", "open-meteo"]),
+      new Set(["usgs", "eonet", "nasa-firms", "open-meteo", "smn"]),
     );
   }
 });

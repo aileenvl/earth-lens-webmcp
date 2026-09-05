@@ -1,6 +1,6 @@
 import type { EvidenceRecord, InvestigationArea, SourceState, TimeWindow } from "../domain/types.ts";
 
-export type LayerId = "earthquakes" | "air-quality" | "natural-events" | "thermal-hotspots";
+export type LayerId = "earthquakes" | "air-quality" | "natural-events" | "thermal-hotspots" | "weather-forecast";
 export interface WebMcpState {
   activeLayers: LayerId[];
   timeWindow: TimeWindow;

@@ -4,7 +4,7 @@
 
 - [x] Production release candidate deployed.
 - [x] Site access set to public for judges.
-- [x] Live USGS, NASA EONET, and Open-Meteo/CAMS data verified.
+- [x] Live USGS, NASA EONET, NASA VIIRS, Open-Meteo/CAMS, and SMN/CONAGUA data verified.
 - [x] ArcGIS map and accessible textual controls verified.
 - [x] Eleven WebMCP tools implemented with strict schemas and structured results.
 - [x] MIT license, setup, architecture, attribution, limitations, and tests documented.
@@ -29,9 +29,9 @@
 
 ## Known non-blocking finding
 
-`npm audit` reports four moderate vulnerabilities in the development-only
-Drizzle tooling chain. No high-severity finding exists; the automated forced fix
-would make a breaking downgrade and is not applied to the release candidate.
+`npm audit` reports five moderate vulnerabilities in development/build tooling.
+No high-severity finding exists; the automated forced fix would make a breaking
+Drizzle change and is not applied to the release candidate.
 
 ## Separate community follow-up
 

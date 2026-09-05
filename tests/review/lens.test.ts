@@ -6,8 +6,10 @@ import type { EvidenceRecord } from "../../app/domain/types.ts";
 
 const evidence: EvidenceRecord = { id: "usgs:test", provider: "usgs", sourceUrl: "https://earthquake.usgs.gov/test", coordinates: { latitude: 1, longitude: 2 }, observedAt: "2026-08-30T10:00:00Z", fetchedAt: "2026-08-30T11:00:00Z", evidenceType: "earthquake", title: "Test", attributes: {}, limitation: "May change." };
 test("coverage distinguishes ready, unavailable, modelled, and thermal-detection sources", () => {
-  const coverage = analyzeCoverage({ usgs: { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, eonet: { status: "unavailable", fetchedAt: "2026-08-30T11:00:00Z", reason: "offline" }, "open-meteo": { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, "nasa-firms": { status: "empty", fetchedAt: "2026-08-30T11:00:00Z", reason: "No detections; not an all-clear." } }, [evidence], Date.parse("2026-08-30T11:10:00Z"));
+  const expandedCoverage = analyzeCoverage({ usgs: { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, eonet: { status: "unavailable", fetchedAt: "2026-08-30T11:00:00Z", reason: "offline" }, "open-meteo": { status: "ready", fetchedAt: "2026-08-30T11:00:00Z", count: 1 }, "nasa-firms": { status: "empty", fetchedAt: "2026-08-30T11:00:00Z", reason: "No detections; not an all-clear." }, smn: { status: "empty", fetchedAt: "2026-08-30T11:00:00Z", reason: "SMN coverage is limited to Mexico." } }, [evidence], Date.parse("2026-08-30T11:10:00Z"));
+  const coverage = expandedCoverage.filter((entry) => entry.provider !== "smn");
   assert.deepEqual(coverage.map((entry) => entry.state), ["ready", "unavailable", "modelled", "empty"]);
+  assert.deepEqual(expandedCoverage.map((entry) => entry.state), ["ready", "unavailable", "modelled", "empty", "empty"]);
 });
 test("draft retains citations and gaps and human edits create a new draft revision", () => {
   const coverage = [{ provider: "eonet" as const, state: "empty" as const, detail: "none" }];

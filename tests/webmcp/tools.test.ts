@@ -19,14 +19,17 @@ test("exposes the accepted eleven-tool semantic contract with strict schemas", (
   assert.equal(allTools.every((tool) => tool.description.length > 20 && tool.inputSchema.additionalProperties === false), true);
   assert.equal(allTools.some((tool) => /reviewed|publish|send/i.test(tool.name)), false);
   const layerTool = allTools.find((tool) => tool.name === "set_layer_visibility");
-  const layerProperty = layerTool?.inputSchema.properties?.layerId as { enum?: string[] } | undefined;
+  const expandedLayerProperty = (layerTool?.inputSchema as { properties?: { layerId?: { enum?: string[] } } } | undefined)?.properties?.layerId;
+  const layerProperty = { enum: expandedLayerProperty?.enum?.filter((layerId) => layerId !== "weather-forecast") };
   assert.deepEqual(layerProperty?.enum, ["earthquakes", "air-quality", "natural-events", "thermal-hotspots"]);
+  assert.deepEqual(expandedLayerProperty?.enum, ["earthquakes", "air-quality", "natural-events", "thermal-hotspots", "weather-forecast"]);
 });
 test("uses one envelope and validates execution input again", async () => {
   assert.deepEqual(await decode("get_workspace_state"), { ok: true, data: state });
   const invalid = await decode("set_time_window", { window: "forever" }); assert.equal(invalid.ok, false); assert.equal(invalid.error.code, "INVALID_INPUT");
   assert.equal((await decode("set_geographic_area", { latitude: 999, longitude: 2, radiusKm: 10 })).ok, false);
   assert.deepEqual(await decode("focus_place", { query: "CDMX", radiusKm: 75 }), { ok: true, data: { query: "CDMX", radiusKm: 75 } });
+  assert.deepEqual(await decode("set_layer_visibility", { layerId: "weather-forecast", visible: true }), { ok: true, data: { layerId: "weather-forecast", visible: true } });
 });
 test("feature detection degrades safely and registration cleanup aborts once", async () => {
   assert.equal(await registerWebMcpTools(undefined, []).ready, false);

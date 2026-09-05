@@ -10,8 +10,9 @@ produce a reviewable draft; there is no send or publish operation.
 ## Data flow
 
 1. Area and time controls update the revisioned workspace.
-2. Independent adapters request USGS, NASA EONET, Open-Meteo/CAMS, and NASA
-   LANCE/FIRMS VIIRS data through public HTTPS endpoints.
+2. Independent adapters request USGS, NASA EONET, Open-Meteo/CAMS, NASA
+   LANCE/FIRMS VIIRS, and Mexico's SMN/CONAGUA municipal forecast data through
+   public HTTPS endpoints.
 3. Each adapter validates and normalizes provenance into a common evidence
    contract. Abort signals and revision checks discard stale responses.
 4. ArcGIS and the textual evidence surface render the same normalized records.
@@ -28,9 +29,15 @@ contract. The 30-day workspace state discloses the source's seven-day limit.
 Every surface calls it a thermal hotspot rather than treating a satellite heat
 anomaly as a confirmed wildfire.
 
+The SMN boundary runs on the server, decompresses and validates the official
+nationwide feed, caches it for approximately 75 minutes, and returns at most
+four forecast days for the nearest supported municipality. The browser never
+receives the nationwide payload. Weather temperature remains distinct from
+VIIRS land-surface thermal detections and from modelled CAMS air quality.
+
 ## Natural-language interaction
 
-Signed-in visitors can ask questions directly in the app. A bounded evidence
+Visitors can ask questions directly in the public app without signing in. A bounded evidence
 snapshot and short conversation history go to the OpenAI Responses API with
 storage disabled. The API key remains server-side. Both request and model output
 are validated, actions are restricted to the eleven Earth Lens operations, and a
@@ -69,10 +76,9 @@ No tool has an outbound side effect.
 
 ## Browser support note
 
-The Codex in-app browser used for the verification snapshot did not expose the
-experimental `document.modelContext` API. Contract behavior is automated; the
-submission video must additionally prove discovery and invocation in Chrome
-with WebMCP enabled.
+The Codex in-app browser and WebMCP-enabled Chrome can discover the eleven
+registered tools. Browsers without the experimental API retain the complete
+human interface.
 
 ## VIIRS verification snapshot — 2026-09-03
 
@@ -84,3 +90,15 @@ with WebMCP enabled.
 - The WebMCP surface remains eleven tools; `thermal-hotspots` is an additive
   layer accepted by the existing visibility, query, inspection, coverage,
   undo, and drafting tools.
+
+## SMN and place-resolution snapshot — 2026-09-04
+
+- 75 logic tests and 9 rendered-source tests pass; overall logic line coverage
+  is 94.68%.
+- TypeScript, ESLint, production build, dependency architecture, secret scans,
+  and the high-severity dependency audit pass.
+- A real WebMCP `focus_place` call resolves Escobedo to Escobedo, Nuevo León,
+  updates the visible heading/map, and refreshes CAMS air quality plus the
+  official General Escobedo SMN forecast.
+- The WebMCP surface remains eleven tools; `weather-forecast` participates in
+  the existing state, layer, query, inspection, coverage, and drafting tools.
